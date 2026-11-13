@@ -8,7 +8,7 @@ Animated, karaoke-style lyrics, a spinning vinyl and beat-reactive edge lighting
 - Full-height vinyl with the album cover as the label, a tonearm that creeps across as the song plays
 - Edge glow in the cover's dominant colour that flashes on the beat (toggleable)
 - Flowing sound-wave visualiser driven by the live spectrum (toggleable)
-- Play / pause / next / previous from the panel or with `Space` / `N` / `B`: through Windows' media controls (any player, no Premium), or through Spotify's API if you're connected (Premium, also works for cast speakers)
+- Play / pause / next / previous from the panel buttons (no keyboard shortcuts, so nothing fires while you're gaming): through Windows' media controls (any player, no Premium), or through Spotify's API if you're connected (Premium, also works for cast speakers)
 - Better lyric matching, with an "estimated timing" fallback when only un-timed lyrics exist
 - Reads what's playing from **Spotify** or straight from **your PC** (Windows), no account needed
 - Lyrics from [LRCLIB](https://lrclib.net), cover art from Apple's public search, BPM from [ReccoBeats](https://reccobeats.com)
@@ -46,7 +46,7 @@ Auth uses PKCE in the browser, so there's no secret and no backend. Tokens stay 
 - **Spotify on a cast speaker?** The audio never touches your PC, so Lyric Glow falls back to the song's BPM (from ReccoBeats) or **Tap tempo**.
 - Don't want flashing? Untick **Beat flash**.
 
-Keys: `H` hide/show panel · `F` fullscreen · `Space` play/pause (audio files).
+Keys: `H` hide/show panel · `F` fullscreen. (No playback keys, on purpose.)
 
 ## Build the Windows app
 

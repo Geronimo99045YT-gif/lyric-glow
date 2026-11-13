@@ -98,14 +98,14 @@ audio{width:100%;height:34px}
   <div class="by">Made by Chaz</div>
  </div>
 </div>
-<div id="hint">press H to hide panel · F for fullscreen · Space to play/pause</div>
+<div id="hint">press H to hide panel · F for fullscreen</div>
 
 <div id="panel">
   <h1><i></i>Lyric Glow</h1>
   <div class="row" id="transport" style="align-items:stretch">
-    <button class="btn" id="tprev" title="Previous (B)">⏮</button>
-    <button class="btn primary" id="tpp" title="Play / pause (Space)">⏯</button>
-    <button class="btn" id="tnext" title="Next (N)">⏭</button>
+    <button class="btn" id="tprev" title="Previous">⏮</button>
+    <button class="btn primary" id="tpp" title="Play / pause">⏯</button>
+    <button class="btn" id="tnext" title="Next">⏭</button>
   </div>
   <small id="tmsg" style="margin-top:-8px;min-height:14px"></small>
   <div id="spbox">
@@ -624,9 +624,6 @@ addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
  if(k==='h')$('panel').classList.toggle('hide');
  if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
- if(k===' '){e.preventDefault();ctrl('playpause')}
- if(k==='n')ctrl('next');
- if(k==='b')ctrl('prev');
 });
 // ---- Local mode: read what THIS PC is playing (Windows) via server.py. No Spotify account needed. ----
 // Reuses the SP state object so lyrics sync, progress bar, spin and tonearm all work unchanged.
