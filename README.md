@@ -23,6 +23,10 @@ Animated, karaoke-style lyrics, a spinning vinyl and beat-reactive edge lighting
 
 On a plain double-clicked `.html`, type a song in **Search a song**, hit **Find lyrics + cover**, then press **Start** the moment it begins. Nudge with **Lyric offset** if it drifts.
 
+## Website
+
+`docs/` is the GitHub Pages site: `index.html` is the landing page and `app.html` is the web app (a copy of `lyric-glow.html`, so re-copy it after editing: `cp lyric-glow.html docs/app.html`). Served at **https://karaokechaz.duckdns.org**. On the web version Spotify login uses `https://karaokechaz.duckdns.org/app.html` as its Redirect URI.
+
 ## Quick start
 
 **Windows app:** grab `Lyric-Glow.exe` from the Releases page (or build it, below) and double-click it. Windows SmartScreen will say "unknown publisher" because the app is unsigned: **More info → Run anyway**. In the setup guide choose **Skip, use my PC's player** for zero setup.

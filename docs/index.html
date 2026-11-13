@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lyric Glow</title>
+<meta name="description" content="Karaoke-style lyrics, a spinning vinyl and beat-reactive lighting for whatever you're playing. Free Windows app or open it in your browser.">
+<meta name="theme-color" content="#07060c">
+<link rel="icon" href="icon.png">
+<meta property="og:title" content="Lyric Glow">
+<meta property="og:description" content="Karaoke-style lyrics, a spinning vinyl and beat-reactive lighting for whatever you're playing.">
+<meta property="og:image" content="icon.png">
+<style>
+@property --p{syntax:'<percentage>';inherits:false;initial-value:0%}
+:root{--bg:#07060c;--c1:#ff4d8d;--c2:#7a5cff;--c3:#18d6ff;--txt:#f4f2ff;--mut:rgba(244,242,255,.62);--line:rgba(255,255,255,.1);--glass:rgba(255,255,255,.055)}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.6;overflow-x:hidden}
+a{color:inherit}
+.wrap{width:min(1120px,100% - 40px);margin-inline:auto}
+
+/* background glow */
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:
+ radial-gradient(60vw 50vh at 85% 8%,rgba(255,77,141,.22),transparent 70%),
+ radial-gradient(55vw 55vh at 5% 75%,rgba(24,214,255,.14),transparent 70%),
+ radial-gradient(40vw 40vh at 55% 105%,rgba(122,92,255,.18),transparent 70%)}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.01em;text-decoration:none;font-size:18px}
+.brand img{width:34px;height:34px;border-radius:9px}
+.nav-links{display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut)}
+.nav-links a{text-decoration:none;transition:color .2s}.nav-links a:hover{color:var(--txt)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:15px 26px;border-radius:14px;font-weight:700;font-size:16px;text-decoration:none;border:1px solid var(--line);background:var(--glass);transition:transform .18s,background .2s,box-shadow .2s;backdrop-filter:blur(10px)}
+.btn:hover{transform:translateY(-2px);background:rgba(255,255,255,.12)}
+.btn.primary{background:linear-gradient(135deg,var(--c1),var(--c2));border:none;box-shadow:0 10px 36px rgba(255,77,141,.35)}
+.btn.primary:hover{box-shadow:0 14px 44px rgba(255,77,141,.5);background:linear-gradient(135deg,var(--c1),var(--c2))}
+.btn svg{width:20px;height:20px;fill:currentColor}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;padding:56px 0 90px}
+.pill{display:inline-block;padding:6px 14px;border-radius:99px;border:1px solid var(--line);background:var(--glass);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:22px}
+h1{font-size:clamp(40px,6.4vw,76px);line-height:1.02;letter-spacing:-.035em;font-weight:900}
+h1 em{font-style:normal;background:linear-gradient(90deg,var(--c1),var(--c2) 50%,var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{margin-top:22px;font-size:clamp(17px,2vw,20px);color:var(--mut);max-width:34em}
+.cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
+.fine{margin-top:16px;font-size:13px;color:var(--mut);max-width:36em}
+
+/* hero visual */
+.stage{position:relative;aspect-ratio:1;display:grid;place-items:center}
+.vinyl{width:84%;aspect-ratio:1;border-radius:50%;position:relative;animation:spin 7s linear infinite;
+ background:repeating-radial-gradient(circle at 50% 50%,#0c0c11 0 2px,#17171f 2px 4px);
+ box-shadow:0 0 0 2px #1b1b24,0 0 80px rgba(255,77,141,.45),0 0 160px rgba(122,92,255,.28)}
+.vinyl::before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 20deg,transparent 0 10%,rgba(255,255,255,.2) 14%,transparent 20% 60%,rgba(255,255,255,.14) 64%,transparent 70%)}
+.vinyl::after{content:"";position:absolute;inset:32%;border-radius:50%;background:radial-gradient(circle at 50% 50%,#07060c 0 3.5%,transparent 3.6%),linear-gradient(135deg,var(--c1),var(--c2) 60%,var(--c3));box-shadow:0 0 0 3px rgba(0,0,0,.4)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lyric{position:absolute;left:-4%;right:-4%;bottom:6%;text-align:center;font-weight:900;letter-spacing:-.02em;font-size:clamp(26px,4.6vw,54px);pointer-events:none;text-shadow:0 4px 30px rgba(0,0,0,.7)}
+.lyric span{background:linear-gradient(90deg,#fff var(--p),rgba(255,255,255,.28) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;animation:sweep 4.2s linear infinite}
+@keyframes sweep{0%{--p:-10%}80%,100%{--p:110%}}
+.bars{position:absolute;left:0;right:0;top:50%;height:90px;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;gap:5px;pointer-events:none;mix-blend-mode:screen;opacity:.85}
+.bars i{width:5px;border-radius:5px;background:linear-gradient(var(--c3),var(--c1));animation:bar 1.1s ease-in-out infinite alternate}
+@keyframes bar{from{height:8px}to{height:var(--h,70px)}}
+
+/* sections */
+section{padding:84px 0}
+.eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--c3);font-weight:700}
+h2{font-size:clamp(30px,4.4vw,46px);letter-spacing:-.025em;line-height:1.1;margin-top:10px;font-weight:900}
+.sub{color:var(--mut);margin-top:14px;max-width:40em}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px}
+.card{padding:26px;border-radius:20px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.22)}
+.card .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;background:linear-gradient(135deg,rgba(255,77,141,.25),rgba(122,92,255,.25));font-size:22px}
+.card h3{font-size:18px;letter-spacing:-.01em;margin-bottom:6px}
+.card p{font-size:14.5px;color:var(--mut)}
+
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:44px;counter-reset:s}
+.step{position:relative;padding:28px 26px 26px;border-radius:20px;border:1px solid var(--line);background:var(--glass)}
+.step::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:36px;height:36px;border-radius:50%;font-weight:800;margin-bottom:16px;background:linear-gradient(135deg,var(--c1),var(--c2))}
+.step h3{font-size:18px;margin-bottom:6px}.step p{font-size:14.5px;color:var(--mut)}
+
+table{width:100%;border-collapse:separate;border-spacing:0;margin-top:40px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--glass);font-size:14.5px}
+th,td{padding:16px 20px;text-align:left;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+th{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700;background:rgba(255,255,255,.03)}
+td:first-child{font-weight:700}
+.yes{color:#6ee7a8}.no{color:rgba(244,242,255,.4)}
+.tbl-wrap{overflow-x:auto}
+
+.final{text-align:center;padding:90px 0 110px}
+.final .cta{justify-content:center}
+footer{border-top:1px solid var(--line);padding:30px 0 44px;color:var(--mut);font-size:13.5px}
+footer .row{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between;align-items:center}
+footer a{text-decoration:none;border-bottom:1px solid var(--line)}
+footer a:hover{color:var(--txt)}
+.by b{background:linear-gradient(90deg,var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+@media (max-width:900px){
+ .hero{grid-template-columns:1fr;gap:34px;padding-top:24px}
+ .stage{max-width:480px;margin-inline:auto;width:100%}
+ .grid,.steps{grid-template-columns:1fr}
+ .nav-links a.hide-s{display:none}
+}
+@media (prefers-reduced-motion:reduce){.vinyl,.bars i,.lyric span{animation:none}.lyric span{--p:60%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <nav>
+  <a class="brand" href="#top"><img src="icon.png" alt="">Lyric Glow</a>
+  <div class="nav-links">
+   <a class="hide-s" href="#features">Features</a>
+   <a class="hide-s" href="#how">How it works</a>
+   <a href="https://github.com/Geronimo99045YT-gif/lyric-glow">GitHub</a>
+   <a href="app.html" class="btn" style="padding:10px 18px;font-size:14px;color:var(--txt)">Open web app</a>
+  </div>
+ </nav>
+
+ <header class="hero" id="top">
+  <div>
+   <span class="pill">Free · made by Chaz</span>
+   <h1>Your music, <em>glowing</em> on screen.</h1>
+   <p class="lead">Karaoke-style lyrics that fill in word by word, a full-height spinning vinyl, and edge lighting that flashes on the beat. Built for that late-night desk setup.</p>
+   <div class="cta">
+    <a class="btn primary" href="https://github.com/Geronimo99045YT-gif/lyric-glow/releases/latest/download/Lyric-Glow.exe">
+     <svg viewBox="0 0 24 24"><path d="M3 5.5 10.5 4.4v7H3zM11.5 4.3 21 3v8.4h-9.5zM3 12.6h7.5v7L3 18.5zM11.5 12.6H21V21l-9.5-1.3z"/></svg>
+     Download for Windows</a>
+    <a class="btn" href="app.html">Open in browser</a>
+   </div>
+   <p class="fine">Windows will say "unknown publisher" because the app isn't code-signed: click <b>More info → Run anyway</b>. No install, no account needed.</p>
+  </div>
+  <div class="stage" aria-hidden="true">
+   <div class="vinyl"></div>
+   <div class="bars" id="bars"></div>
+   <div class="lyric"><span>Turn it up</span></div>
+  </div>
+ </header>
+</div>
+
+<section id="features">
+ <div class="wrap">
+  <div class="eyebrow">Features</div>
+  <h2>Everything a desk setup display needs.</h2>
+  <p class="sub">Open it, play a song, and it just works. No fiddling with timings or skins.</p>
+  <div class="grid">
+   <div class="card"><div class="ic">🎤</div><h3>Karaoke lyrics</h3><p>Synced lyrics that fill in word by word, with the previous and next lines faded around the current one.</p></div>
+   <div class="card"><div class="ic">💿</div><h3>Full-height vinyl</h3><p>A record with the album cover as its label spins while the song plays, with a tonearm that creeps in as it progresses.</p></div>
+   <div class="card"><div class="ic">⚡</div><h3>Beat-reactive glow</h3><p>Edge lighting in the cover's dominant colour that flashes on every beat. One checkbox turns the flashing off.</p></div>
+   <div class="card"><div class="ic">🌊</div><h3>Sound wave</h3><p>Flowing layered waves driven by the real audio spectrum, drawn behind the lyrics.</p></div>
+   <div class="card"><div class="ic">🎛️</div><h3>Player controls</h3><p>Play, pause and skip from the screen. Works with any player on your PC, or Spotify directly if you're on Premium.</p></div>
+   <div class="card"><div class="ic">🔌</div><h3>Auto-detects what's playing</h3><p>The Windows app reads Spotify, YouTube, Apple Music and more. No account, no setup. Or connect Spotify for the full thing.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="how">
+ <div class="wrap">
+  <div class="eyebrow">How it works</div>
+  <h2>Up and running in a minute.</h2>
+  <div class="steps">
+   <div class="step"><h3>Get it</h3><p>Download the Windows app and double-click it. Or open the web version right here in your browser.</p></div>
+   <div class="step"><h3>Pick your player</h3><p>In the app, hit "Skip" to read your PC's player. Or connect your own free Spotify app for exact progress and BPM.</p></div>
+   <div class="step"><h3>Press play</h3><p>Lyrics, cover art and the beat flash start on their own. Hit <b>F</b> for fullscreen and put it on a second monitor.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="versions">
+ <div class="wrap">
+  <div class="eyebrow">Which one?</div>
+  <h2>Windows app or web version.</h2>
+  <p class="sub">The app is the easy full-featured one. The web version works anywhere, but a website can't see your other apps.</p>
+  <div class="tbl-wrap"><table>
+   <thead><tr><th></th><th>Windows app</th><th>Web version</th></tr></thead>
+   <tbody>
+    <tr><td>Works on</td><td>Windows</td><td>Any computer with a browser</td></tr>
+    <tr><td>Install</td><td>Just double-click</td><td>Nothing</td></tr>
+    <tr><td>Auto-detects what's playing</td><td class="yes">Yes</td><td class="no">No: search a song, or connect Spotify</td></tr>
+    <tr><td>Beat flash audio</td><td class="yes">Automatic</td><td>Share "Entire screen" + system audio</td></tr>
+    <tr><td>Lyrics, cover art, wave, controls</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+   </tbody>
+  </table></div>
+ </div>
+</section>
+
+<div class="wrap final">
+ <h2>Put your music on show.</h2>
+ <p class="sub" style="margin-inline:auto">Free, open source, and runs entirely on your own computer.</p>
+ <div class="cta">
+  <a class="btn primary" href="https://github.com/Geronimo99045YT-gif/lyric-glow/releases/latest/download/Lyric-Glow.exe">Download for Windows</a>
+  <a class="btn" href="app.html">Open in browser</a>
+ </div>
+</div>
+
+<footer>
+ <div class="wrap row">
+  <span class="by">Made by <b>Chaz</b></span>
+  <span>Lyrics from LRCLIB · covers from Apple · not affiliated with Spotify</span>
+  <a href="https://github.com/Geronimo99045YT-gif/lyric-glow">Source on GitHub</a>
+ </div>
+</footer>
+
+<script>
+// decorative bars for the hero (heights are random per bar, tapered at the edges)
+const bars=document.getElementById('bars');
+for(let i=0;i<41;i++){
+ const e=document.createElement('i'),t=Math.sin(Math.PI*i/40);
+ e.style.setProperty('--h',(14+Math.random()*70*t+10*t)+'px');
+ e.style.animationDuration=(.7+Math.random()*.9)+'s';
+ e.style.animationDelay=(-Math.random()*1.5)+'s';
+ bars.appendChild(e);
+}
+</script>
+</body>
+</html>

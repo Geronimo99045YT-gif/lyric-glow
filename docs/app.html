@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lyric Glow</title>
+<style>
+:root{--c1:#ff4d8d;--c2:#7a5cff;--c3:#18d6ff;--bg:#07060c;--glass:rgba(255,255,255,.07);--line:rgba(255,255,255,.12);--txt:#f4f2ff}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:Inter,"Segoe UI",system-ui,sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8vw;text-align:center;gap:2.2vh;pointer-events:none}
+.ln{font-weight:900;letter-spacing:-.02em;line-height:1.1;transition:all .6s cubic-bezier(.2,.8,.2,1);opacity:.0;transform:translateY(14px) scale(.96);filter:blur(6px)}
+.prev,.next{font-size:clamp(20px,3vw,40px);opacity:.3;filter:blur(1.5px);transform:none}
+.cur{font-size:clamp(36px,6.5vw,104px);opacity:1;filter:none;transform:none}
+/* no-lyrics card: song name (big) / artist / faded "Lyrics unavailable" */
+.next.artist{font-size:clamp(22px,3.2vw,46px);opacity:.78;filter:none}
+.nolyr{font-size:clamp(15px,1.8vw,24px);font-weight:700;letter-spacing:.04em;opacity:.34;filter:none;transform:none;margin-top:-.6vh}
+.w{background:linear-gradient(90deg,#fff calc(var(--f,-10%) - 10%),rgba(255,255,255,.28) calc(var(--f,-10%) + 10%));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.cur.pop{animation:pop .6s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes pop{from{opacity:0;transform:translateY(24px) scale(.94);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+#np{position:fixed;left:42vw;bottom:7vh;width:40vw;max-width:640px;pointer-events:none;text-align:center}
+.nokar .w{background:none;-webkit-text-fill-color:#fff}
+.nobar #np .bar,.nobar #np .tm{display:none}
+#np .ctl{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:14px;pointer-events:auto}
+#np .ctl button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--txt);display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .15s,background .2s,box-shadow .2s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#np .ctl button svg{width:18px;height:18px;fill:currentColor}
+#np .ctl button:hover{background:rgba(255,255,255,.18);transform:scale(1.08)}
+#np .ctl button:active{transform:scale(.94)}
+#np .ctl #cpp{width:48px;height:48px;border:none;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 6px 22px color-mix(in srgb,var(--c1) 45%,transparent)}
+#np .ctl #cpp svg{width:22px;height:22px}
+.noctl #np .ctl{display:none}
+.inp{width:100%;margin-bottom:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt);font-size:13px;font-family:inherit}
+.chk{display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-size:13px;opacity:.85;margin:0;cursor:pointer}
+.chk input{accent-color:var(--c1);width:16px;height:16px}
+#np .t{font-size:clamp(16px,1.7vw,26px);font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#np .a{font-size:clamp(12px,1.1vw,16px);opacity:.6;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#np .bar{height:4px;border-radius:4px;background:rgba(255,255,255,.14);margin-top:12px;overflow:hidden}
+#np .bar i{display:block;height:100%;width:100%;transform-origin:left;transform:scaleX(0);background:linear-gradient(90deg,var(--c1),var(--c3));border-radius:4px}
+#np .tm{display:flex;justify-content:space-between;font-size:11px;opacity:.5;margin-top:6px;font-variant-numeric:tabular-nums}
+@media (max-aspect-ratio:11/10){#np{left:7vw;width:86vw;bottom:5vh}}
+.idle,.idle *{cursor:none!important}
+.idle #hint{opacity:0}
+#hint{transition:opacity .8s}
+#by{position:fixed;left:50%;bottom:1.6vh;transform:translateX(-50%);font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.32;pointer-events:none;white-space:nowrap}
+#by b{font-weight:800;opacity:1;background:linear-gradient(90deg,var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+#wiz{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#wiz[hidden]{display:none}
+#wiz .card{width:min(560px,100%);max-height:100%;overflow:auto;padding:30px;border-radius:26px;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.04));border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.65)}
+#wiz .wh{font-size:22px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#wiz .wh i{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c3));box-shadow:0 0 14px var(--c1)}
+#wiz .wh span{font-size:12px;font-weight:500;opacity:.5;letter-spacing:.02em}
+#wiz ol{list-style:none;counter-reset:s;margin:22px 0 14px;display:flex;flex-direction:column;gap:16px;padding:0}
+#wiz li{counter-increment:s;position:relative;padding-left:44px;font-size:14px;line-height:1.5;opacity:.92}
+#wiz li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:linear-gradient(135deg,var(--c1),var(--c2))}
+#wiz a{color:var(--c3);font-weight:600}
+#wiz .copy{display:flex;gap:8px;margin-top:8px;align-items:stretch}
+#wiz code{flex:1;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.4);border:1px solid var(--line);font:12px ui-monospace,Consolas,monospace;word-break:break-all}
+#wiz .copy .btn{width:auto;padding:0 16px}
+#wiz input{width:100%;margin-top:8px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font:13px ui-monospace,Consolas,monospace}
+#wmsg{font-size:13px;min-height:18px;color:#ffb3b3}
+#wiz .wb{display:flex;gap:10px;margin-top:10px}
+#wiz .by{text-align:center;margin-top:20px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.4}
+#panel{position:fixed;top:18px;right:18px;width:300px;max-height:calc(100% - 36px);overflow:auto;padding:18px;border-radius:20px;
+ background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+ box-shadow:0 20px 60px rgba(0,0,0,.5);transition:opacity .4s,transform .4s;display:flex;flex-direction:column;gap:14px}
+#panel.hide{opacity:0;transform:translateX(30px);pointer-events:none}
+h1{font-size:15px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+h1 i{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c3));box-shadow:0 0 12px var(--c1)}
+label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;opacity:.55;display:block;margin-bottom:6px}
+.btn{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--txt);font:inherit;font-size:13px;cursor:pointer;transition:.2s;text-align:center}
+.btn:hover{background:rgba(255,255,255,.14);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--c1),var(--c2));border:none;font-weight:600}
+textarea{width:100%;height:110px;resize:vertical;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt);padding:10px;font:12px/1.4 ui-monospace,Consolas,monospace}
+input[type=range]{width:100%;accent-color:var(--c1)}
+.pal{display:flex;gap:8px}
+.pal button{flex:1;height:30px;border-radius:10px;border:2px solid transparent;cursor:pointer}
+.pal button.on{border-color:#fff}
+.row{display:flex;gap:8px}
+small{opacity:.45;font-size:11px;line-height:1.4}
+audio{width:100%;height:34px}
+#hint{position:fixed;top:18px;left:50%;transform:translateX(-50%);font-size:12px;opacity:.4;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="stage">
+  <div class="ln prev" id="lp"></div>
+  <div class="ln cur" id="lc"></div>
+  <div class="ln next" id="ln"></div>
+  <div class="ln nolyr" id="lu"></div>
+</div>
+<div id="np"><div class="t" id="npt"></div><div class="a" id="npa"></div><div class="bar"><i id="npi"></i></div><div class="tm"><span id="npc"></span><span id="npd"></span></div>
+ <div class="ctl" id="npctl">
+  <button id="cprev" title="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM20 6v12L9.5 12z"/></svg></button>
+  <button id="cpp" title="Play / pause"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+  <button id="cnext" title="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM4 6v12l10.5-6z"/></svg></button>
+ </div></div>
+<div id="dbg" style="position:fixed;right:20px;bottom:14px;font:11px ui-monospace,Consolas,monospace;opacity:.45;pointer-events:none"></div>
+<div id="by">Made by <b>Chaz</b></div>
+<div id="wiz" hidden>
+ <div class="card">
+  <div class="wh"><i></i>Lyric Glow <span>one-time setup · about 2 minutes</span></div>
+  <ol>
+   <li><b>Create a free Spotify app.</b> <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Open the Spotify dashboard</a>, click <b>Create app</b>, name it anything, and tick <b>Web API</b>.</li>
+   <li><b>Paste this Redirect URI</b> into the app's settings (exactly as shown):
+    <div class="copy"><code id="wr"></code><button class="btn" id="wcp">Copy</button></div></li>
+   <li>In the app's <b>User Management</b>, add the email of your Spotify account.</li>
+   <li><b>Paste your Client ID</b> (app Settings → Client ID):
+    <input id="wcid" placeholder="Client ID" autocomplete="off" spellcheck="false"></li>
+  </ol>
+  <div id="wnote" style="font-size:12.5px;opacity:.6;margin-bottom:10px;line-height:1.5">No Spotify account, or can't be bothered? Skip this. Lyric Glow can read what your PC is playing (Spotify app, YouTube, Apple Music, etc.) on Windows.</div>
+  <div id="wmsg"></div>
+  <div class="wb"><button class="btn primary" id="wgo">Connect Spotify</button><button class="btn" id="wskip">Skip, use my PC's player</button></div>
+  <div class="by">Made by Chaz</div>
+ </div>
+</div>
+<div id="hint">press H to hide panel · F for fullscreen</div>
+
+<div id="panel">
+  <h1><i></i>Lyric Glow</h1>
+  <div class="row" id="transport" style="align-items:stretch">
+    <button class="btn" id="tprev" title="Previous">⏮</button>
+    <button class="btn primary" id="tpp" title="Play / pause">⏯</button>
+    <button class="btn" id="tnext" title="Next">⏭</button>
+  </div>
+  <small id="tmsg" style="margin-top:-8px;min-height:14px"></small>
+  <div id="spbox">
+    <label>Spotify</label>
+    <button class="btn" id="wopen" style="margin-bottom:8px">Setup guide</button>
+    <input id="cid" placeholder="Spotify Client ID" style="width:100%;margin-bottom:8px;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt);font:12px ui-monospace,Consolas,monospace">
+    <button class="btn primary" id="spc">Connect Spotify</button>
+    <button class="btn" id="live" style="margin-top:8px">Capture system audio (for beat glow)</button>
+    <div class="row" style="margin-top:8px"><button class="btn" id="tap">Tap tempo (cast speakers)</button><button class="btn" id="tapx" style="width:64px">Clear</button></div>
+    <small id="spst"style="display:block;margin-top:6px">Redirect URI to add in your Spotify app: <b id="ruri"></b></small>
+  </div>
+  <div>
+    <label>Search a song (no Spotify needed)</label>
+    <input class="inp" id="qt" placeholder="Song title" autocomplete="off">
+    <input class="inp" id="qa" placeholder="Artist (optional)" autocomplete="off">
+    <button class="btn primary" id="qgo">Find lyrics + cover</button>
+    <div class="row" style="margin-top:8px"><button class="btn" id="qplay">▶ Start</button><button class="btn" id="qrst">⟲ Restart</button></div>
+    <small style="display:block;margin-top:6px">Hit Start the moment the song begins. Fine-tune with Lyric offset below.</small>
+  </div>
+  <div>
+    <label>Track</label>
+    <input type="file" id="file" accept="audio/*" hidden>
+    <button class="btn primary" id="pick">Choose audio file</button>
+  </div>
+  <audio id="au" controls></audio>
+  <div>
+    <label>Synced lyrics (LRC)</label>
+    <textarea id="lrc" placeholder="[00:12.00] first line&#10;[00:16.50] second line"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="apply">Apply</button>
+      <button class="btn" id="lrcfile">Load .lrc</button>
+    </div>
+    <input type="file" id="lrcin" accept=".lrc,.txt" hidden>
+  </div>
+  <div>
+    <label>Palette</label>
+    <div class="pal" id="pal"></div>
+  </div>
+  <div class="row" style="gap:10px 18px;flex-wrap:wrap"><label class="chk"><input type="checkbox" id="kar" checked>Karaoke fill</label><label class="chk"><input type="checkbox" id="pbar" checked>Progress bar</label><label class="chk"><input type="checkbox" id="fl" checked>Beat flash</label><label class="chk"><input type="checkbox" id="wave" checked>Sound wave</label><label class="chk"><input type="checkbox" id="ctl" checked>Player controls</label></div>
+  <div><label>Glow intensity</label><input type="range" id="gi" min="0.3" max="2" step="0.05" value="1"></div>
+  <div><label>Reactivity</label><input type="range" id="re" min="0" max="2" step="0.05" value="1"></div>
+  <div><label>Lyric offset (s)</label><input type="range" id="off" min="-3" max="3" step="0.1" value="0"></div>
+  <div><label>Beat nudge (BPM mode)</label><input type="range" id="bn" min="-0.5" max="0.5" step="0.02" value="0"></div>
+  <button class="btn" id="demo">Run demo (no audio needed)</button>
+  <small style="text-align:center;opacity:.6;letter-spacing:.12em;text-transform:uppercase">Made by Chaz</small>
+  <small>Everything runs locally in your browser. Lyrics are yours to supply, grab LRC files for tracks you own.</small>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+function setNP(t,a){$('npt').textContent=t||'';$('npa').textContent=a||''}
+const cv=$('cv'),ctx=cv.getContext('2d');
+let W,H;function rs(){const d=Math.min(devicePixelRatio||1,1.25);W=cv.width=innerWidth*d;H=cv.height=innerHeight*d}
+addEventListener('resize',rs);rs();
+
+// palettes
+const PALS={
+ Sunset:['#ff4d8d','#ff9a3c','#7a5cff'],
+ Ocean:['#18d6ff','#3a6bff','#7af0c8'],
+ Neon:['#ff2bd6','#27f0ff','#8a5bff'],
+ Ember:['#ff3b30','#ff8a00','#ffd23c'],
+ Mono:['#ffffff','#9aa0b4','#5a6078']
+};
+const pal=$('pal');
+function setPal(n){
+ const p=PALS[n];['--c1','--c2','--c3'].forEach((v,i)=>document.documentElement.style.setProperty(v,p[i]));
+ [...pal.children].forEach(b=>b.classList.toggle('on',b.dataset.n===n));
+ colors=p.map(hex);try{localStorage.lg_pal=n}catch(e){}
+}
+function hex(h){return[1,3,5].map(i=>parseInt(h.substr(i,2),16))}
+let colors=PALS.Sunset.map(hex);
+for(const n in PALS){const b=document.createElement('button');b.dataset.n=n;b.title=n;
+ b.style.background=`linear-gradient(135deg,${PALS[n].join(',')})`;b.onclick=()=>setPal(n);pal.appendChild(b)}
+let sp='Sunset';try{sp=localStorage.lg_pal||sp}catch(e){}setPal(PALS[sp]?sp:'Sunset');
+
+// audio
+const au=$('au');let ac,an,data,srcNode;
+function initAudio(){
+ if(ac)return;ac=new (window.AudioContext||window.webkitAudioContext)();
+ an=ac.createAnalyser();an.fftSize=512;an.smoothingTimeConstant=.45;
+ srcNode=ac.createMediaElementSource(au);srcNode.connect(an);an.connect(ac.destination);
+ data=new Uint8Array(an.frequencyBinCount);
+}
+$('pick').onclick=()=>$('file').click();
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;demo=false;
+ au.src=URL.createObjectURL(f);setNP(f.name.replace(/\.[^.]+$/,''),'');au.play();};
+au.addEventListener('play',()=>{initAudio();ac.resume()});
+
+// lyrics
+let L=[],idx=-1,offset=0,demo=false,demoT0=0;
+function parseLRC(t){
+ const out=[];
+ t.split(/\r?\n/).forEach(l=>{
+  const tags=[...l.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+  const txt=l.replace(/\[[^\]]*\]/g,'').trim();
+  tags.forEach(m=>out.push({t:+m[1]*60+ +m[2],s:txt}));
+ });
+ return out.sort((a,b)=>a.t-b.t);
+}
+function applyLRC(){L=parseLRC($('lrc').value);idx=-2;show(-1)}
+$('apply').onclick=applyLRC;
+$('lrcfile').onclick=()=>$('lrcin').click();
+$('lrcin').onchange=async e=>{const f=e.target.files[0];if(f){$('lrc').value=await f.text();applyLRC()}};
+$('off').oninput=e=>offset=+e.target.value;
+
+// saved settings
+const SET=['gi','re','off','bn'];
+try{const s=JSON.parse(localStorage.lg_set||'{}');SET.forEach(k=>{if(s[k]!=null)$(k).value=s[k]});offset=+$('off').value}catch(e){}
+SET.forEach(k=>$(k).addEventListener('input',()=>{try{localStorage.lg_set=JSON.stringify(Object.fromEntries(SET.map(k=>[k,$(k).value])))}catch(e){}}));
+
+// toggles (karaoke fill, progress bar), remembered between sessions
+let karOn=true,flashOn=true,waveOn=true;const TG=['kar','pbar','fl','wave','ctl'];
+try{const s=JSON.parse(localStorage.lg_tg||'{}');TG.forEach(k=>{if(s[k]!=null)$(k).checked=s[k]})}catch(e){}
+const applyTG=()=>{karOn=$('kar').checked;flashOn=$('fl').checked;waveOn=$('wave').checked;document.body.classList.toggle('nokar',!karOn);document.body.classList.toggle('nobar',!$('pbar').checked);document.body.classList.toggle('noctl',!$('ctl').checked)};
+TG.forEach(k=>$(k).addEventListener('change',()=>{applyTG();try{localStorage.lg_tg=JSON.stringify(Object.fromEntries(TG.map(k=>[k,$(k).checked])))}catch(e){}}));
+applyTG();
+
+const lp=$('lp'),lc=$('lc'),ln=$('ln');
+let words=[];
+function setCur(txt){ // one span per word so the karaoke fill can sweep through them
+ lc.textContent='';words=[];let pos=0;
+ const ws=txt.split(/\s+/).filter(Boolean);
+ ws.forEach((w,i)=>{
+  const s=document.createElement('span');s.className='w';s.textContent=w;lc.appendChild(s);
+  if(i<ws.length-1)lc.appendChild(document.createTextNode(' '));
+  words.push({s,st:pos,len:w.length+1,f:-1});pos+=w.length+1;
+ });
+ words.total=pos||1;
+}
+function show(i){
+ lp.textContent=L[i-1]?.s||'';ln.textContent=L[i+1]?.s||'';
+ ln.classList.remove('artist');$('lu').textContent='';
+ if(i>=0)setCur(L[i].s);else{lc.textContent='';words=[]}
+ lc.classList.remove('pop');void lc.offsetWidth;lc.classList.add('pop');
+ [lp,lc,ln].forEach(e=>e.style.opacity='');
+}
+
+// demo
+const DEMO=`[00:01.00] this is the demo track
+[00:05.00] your lyrics go right here
+[00:09.00] timed to the beat of your song
+[00:13.00] glow follows the low end
+[00:17.00] load a file to make it yours
+[00:21.00] late nights, soft light
+[00:25.00] turn it up`;
+$('demo').onclick=()=>{au.pause();demo=true;demoT0=performance.now();$('lrc').value=DEMO;applyLRC();setNP('Demo mode','Lyric Glow')};
+
+// ---- Spotify (PKCE, no backend) ----
+const SP={on:false,prog:0,at:0,playing:false,id:null};
+const REDIR=location.origin+location.pathname;
+// true when served from a real website (not this PC): it can't see your other apps, so no auto-detect there
+const HOSTED=location.protocol.startsWith('http')&&!/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+$('ruri').textContent=REDIR;
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+try{$('cid').value=localStorage.lg_cid||''}catch(e){}
+const spSt=t=>$('spst').textContent=t;
+$('spc').onclick=async()=>{
+ const cid=$('cid').value.trim();if(!cid)return spSt('Paste your Client ID first.');
+ if(!location.protocol.startsWith('http'))return spSt('Spotify login needs the Lyric Glow app (plain files can\'t do it). Use "Search a song" instead.');
+ localStorage.lg_cid=cid;
+ const ver=b64(crypto.getRandomValues(new Uint8Array(48)));
+ localStorage.lg_ver=ver;
+ const ch=b64(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ver)));
+ location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:cid,response_type:'code',redirect_uri:REDIR,
+  scope:'user-read-currently-playing user-read-playback-state user-modify-playback-state',code_challenge_method:'S256',code_challenge:ch});
+};
+async function tokenReq(body){
+ const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:localStorage.lg_cid,...body})});
+ const j=await r.json();if(!j.access_token)throw new Error(j.error_description||'token error');
+ localStorage.lg_tok=j.access_token;localStorage.lg_exp=Date.now()+j.expires_in*1000-30000;
+ if(j.refresh_token)localStorage.lg_ref=j.refresh_token;
+}
+async function token(){
+ if(Date.now()<+localStorage.lg_exp)return localStorage.lg_tok;
+ await tokenReq({grant_type:'refresh_token',refresh_token:localStorage.lg_ref});return localStorage.lg_tok;
+}
+async function fetchLyrics(t){
+ const id=t.id,txt=await lrcSearch(t.name,t.artists[0].name,t.album.name,t.duration_ms/1000);
+ if(SP.id!==id)return; // song changed while we were searching
+ if(txt){$('lrc').value=txt;applyLRC();if(lrcEst)estNote();return}
+ noLyrics(t.name,t.artists[0].name);
+}
+function noLyrics(title,artist){ // song name, artist underneath, then a faded "Lyrics unavailable"
+ $('lrc').value='';L=[];idx=-2;show(-1);
+ lp.textContent='';lc.textContent=title;ln.textContent=artist||'';ln.classList.add('artist');$('lu').textContent='Lyrics unavailable';
+}
+// BPM lookup. Spotify closed its own audio-features endpoint to new apps, so ask ReccoBeats (free, keyed by Spotify track id)
+let autoBpm=0;
+async function fetchBpm(id){
+ try{
+  const r=await fetch('https://api.reccobeats.com/v1/audio-features?ids='+id);
+  const tp=(await r.json()).content?.[0]?.tempo;
+  if(id===SP.id){autoBpm=tp||0;$('dbg').textContent=tp?'♪ '+Math.round(tp)+' BPM':'♪ BPM not found for this track'}
+ }catch(e){}
+}
+const bc=document.createElement('canvas');bc.width=bc.height=320;let artOn=false,flash=0,bAvg=0,lastBeat=0;
+let ang=0,spd=0,lastT=performance.now();const stage=$('stage');
+let discKey='',artN=0;const dsk=document.createElement('canvas');dsk.width=dsk.height=900;
+function bakeDisc(){
+ const x=dsk.getContext('2d'),r=450;x.clearRect(0,0,900,900);x.save();x.translate(r,r);
+ const body=x.createRadialGradient(0,0,r*.2,0,0,r);body.addColorStop(0,'#16161d');body.addColorStop(1,'#050508');
+ x.fillStyle=body;x.beginPath();x.arc(0,0,r,0,6.2832);x.fill();
+ x.lineWidth=1.6;
+ for(let g=r*.42;g<r*.97;g+=r*.022){x.strokeStyle=`rgba(255,255,255,${.025+((g*7|0)%3)*.018})`;x.beginPath();x.arc(0,0,g,0,6.2832);x.stroke()}
+ if(x.createConicGradient){
+  const cg=x.createConicGradient(0,0,0);
+  [0,.12,.25,.37,.5,.62,.75,.87,1].forEach((s,i)=>cg.addColorStop(s,`rgba(255,255,255,${i%2?0:.16})`));
+  x.fillStyle=cg;x.beginPath();x.arc(0,0,r*.97,0,6.2832);x.arc(0,0,r*.4,0,6.2832,true);x.fill();
+ }
+ const lr=r*.37;
+ x.save();x.beginPath();x.arc(0,0,lr,0,6.2832);x.clip();
+ if(artOn)x.drawImage(bc,-lr,-lr,lr*2,lr*2);
+ else{const lg=x.createLinearGradient(-lr,-lr,lr,lr);lg.addColorStop(0,`rgb(${colors[0]})`);lg.addColorStop(1,`rgb(${colors[2]})`);x.fillStyle=lg;x.fillRect(-lr,-lr,lr*2,lr*2)}
+ x.restore();
+ x.strokeStyle='rgba(0,0,0,.5)';x.lineWidth=r*.01;x.beginPath();x.arc(0,0,lr,0,6.2832);x.stroke();
+ x.fillStyle='#07060c';x.beginPath();x.arc(0,0,r*.035,0,6.2832);x.fill();
+ x.restore();
+}
+function palFromArt(url){
+ const im=new Image();im.crossOrigin='anonymous';
+ im.onload=()=>{
+  bc.getContext('2d').drawImage(im,0,0,bc.width,bc.height);artOn=true;artN++;
+  try{
+  const c=document.createElement('canvas');c.width=c.height=24;const x=c.getContext('2d');x.drawImage(im,0,0,24,24);
+  const d=x.getImageData(0,0,24,24).data,bins={};
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+   if(mx-mn<40||mx<70)continue;const k=(r>>5)+','+(g>>5)+','+(b>>5);(bins[k]=bins[k]||{n:0,r:0,g:0,b:0});const o=bins[k];o.n++;o.r+=r;o.g+=g;o.b+=b}
+  const top=Object.values(bins).sort((a,b)=>b.n-a.n).slice(0,3).map(o=>[o.r/o.n|0,o.g/o.n|0,o.b/o.n|0]);
+  if(!top.length)return;while(top.length<3)top.push(top[0]);
+  colors=top;['--c1','--c2','--c3'].forEach((v,i)=>document.documentElement.style.setProperty(v,`rgb(${top[i]})`));
+  [...pal.children].forEach(b=>b.classList.remove('on'));
+ }catch(e){}};
+ im.src=url;
+}
+async function poll(){
+ try{
+  const hdr={headers:{Authorization:'Bearer '+await token()}},t0=performance.now();
+  const r=await fetch('https://api.spotify.com/v1/me/player/currently-playing',hdr);
+  const rtt=(performance.now()-t0)/2000; // assume the answer is about half a round trip old
+  if(r.status===204){SP.playing=false}
+  else if(r.ok){
+   const j=await r.json(),t=j.item;
+   if(t){if(t.id!==SP.id)SP.prog=-1; // new track: hard snap
+    syncClock(j.progress_ms/1000,j.is_playing,rtt);SP.dur=t.duration_ms/1000;
+    if(t.id!==SP.id){SP.id=t.id;demo=false;au.pause();
+     setNP(t.name,t.artists.map(a=>a.name).join(', '));
+     palFromArt(t.album.images[0]?.url);fetchLyrics(t);autoBpm=0;fetchBpm(t.id)}}
+  }else if(r.status===401)localStorage.lg_exp=0;
+  spSt(SP.playing?'Connected, following Spotify.':'Connected, nothing playing.');
+ }catch(e){spSt('Spotify error: '+e.message)}
+}
+// ---- Transport controls: play/pause, next, previous ----
+// On this PC (Spotify app, YouTube, anything with media controls) we use Windows' media session via /api/control: no Premium
+// needed. If you're connected to Spotify we use Spotify's own API first (works for cast speakers too, needs Premium + the
+// "modify playback" permission), and fall back to Windows' controls.
+let tmT;const tmsg=t=>{$('tmsg').textContent=t;clearTimeout(tmT);tmT=setTimeout(()=>$('tmsg').textContent='',5000)};
+async function winCtrl(cmd){
+ try{const r=await fetch('/api/control?cmd='+cmd,{method:'POST',headers:{'X-LG':'1'}});return r.status===204}catch(e){return false}
+}
+async function spotifyCtrl(cmd){
+ const tk=await token();let m='POST',p='';
+ if(cmd==='next')p='next';else if(cmd==='prev')p='previous';
+ else{m='PUT';p=(cmd==='play'||(cmd==='playpause'&&!SP.playing))?'play':'pause'}
+ const r=await fetch('https://api.spotify.com/v1/me/player/'+p,{method:m,headers:{Authorization:'Bearer '+tk}});
+ if(r.status===403){let why='';try{why=(await r.json()).error?.message||''}catch(e){}
+  return /premium/i.test(why)?'premium':'scope'}
+ return r.ok||r.status===204||r.status===202?'ok':'fail';
+}
+async function ctrl(cmd){
+ if(au.currentSrc){ // playing one of your own audio files
+  if(cmd==='playpause'||cmd==='play'||cmd==='pause')au.paused?au.play():au.pause();return;
+ }
+ if(String(SP.id).startsWith('man:')){if(cmd==='playpause')$('qplay').click();return}
+ if(localStorage.lg_ref){
+  try{
+   const res=await spotifyCtrl(cmd);
+   if(res==='ok'){setTimeout(poll,450);return}
+   if(res==='premium')tmsg('Spotify only allows remote control on Premium. Trying this PC instead...');
+   if(res==='scope')tmsg('Reconnect Spotify once (new permission) for remote control. Trying this PC instead...');
+  }catch(e){}
+ }
+ if(await winCtrl(cmd)){setTimeout(()=>{(localStorage.lg_ref?poll:locPoll)()},450)}
+ else tmsg('Controls need the Lyric Glow app (or serve.bat). A plain HTML file can\'t control other apps.');
+}
+$('tpp').onclick=$('cpp').onclick=()=>ctrl('playpause');
+$('tnext').onclick=$('cnext').onclick=()=>ctrl('next');
+$('tprev').onclick=$('cprev').onclick=()=>ctrl('prev');
+let lastPl=null;
+function startSpotify(){SP.on=true;$('spc').textContent='Connected ✓';poll();setInterval(poll,2500)}
+(async()=>{
+ const code=new URLSearchParams(location.search).get('code');
+ if(code){
+  try{await tokenReq({grant_type:'authorization_code',code,redirect_uri:REDIR,code_verifier:localStorage.lg_ver});}
+  catch(e){spSt('Auth failed: '+e.message)}
+  history.replaceState({},'',location.pathname);
+ }
+ if(localStorage.lg_ref)startSpotify();
+})();
+
+// system audio capture so the glow reacts to Spotify's actual sound
+let live=false,anL,dataL,capStream,pk=.1,dbgN=0;
+$('live').onclick=async()=>{
+ try{
+  initAudio();await ac.resume();
+  // hint Chrome/Edge to open on "Entire screen" with system audio on (a single *window* can never share audio)
+  const s=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'monitor'},audio:true,systemAudio:'include',monitorTypeSurfaces:'include',selfBrowserSurface:'exclude'});
+  if(!s.getAudioTracks().length){s.getTracks().forEach(t=>t.stop());return spSt('No audio came through. In the picker choose the "Entire screen" tab (NOT "Window") and switch on "Also share system audio". Easier: use the Lyric Glow app, it does this automatically.')}
+  capStream=s; // keep the whole stream alive; stopping the video track can kill the audio too
+  anL=ac.createAnalyser();anL.fftSize=512;anL.smoothingTimeConstant=.45;dataL=new Uint8Array(anL.frequencyBinCount);
+  ac.createMediaStreamSource(new MediaStream(s.getAudioTracks())).connect(anL); // analyser only, not routed to speakers
+  live=true;demo=false;$('live').textContent='System audio live ✓';
+ }catch(e){spSt('Capture cancelled. Tip: pick "Entire screen" and tick "Also share system audio". (Mac browsers can\'t share system audio, only a tab\'s audio.)')}
+};
+
+// tap tempo: a steady pulse for when there's no audio to analyse (e.g. Spotify on a cast speaker)
+let tapOn=false,bpm=0,tapT0=0,taps=[];
+$('tap').onclick=()=>{
+ const n=performance.now();if(taps.length&&n-taps[taps.length-1]>2000)taps=[];
+ taps.push(n);tapT0=n;
+ if(taps.length>=3){
+  const iv=[];for(let i=1;i<taps.length;i++)iv.push(taps[i]-taps[i-1]);
+  const s=iv.slice(-6);bpm=60000/(s.reduce((x,y)=>x+y)/s.length);tapOn=true;demo=false;
+  $('tap').textContent=Math.round(bpm)+' BPM · tap to adjust';
+ }else $('tap').textContent='keep tapping…';
+};
+$('tapx').onclick=()=>{tapOn=false;taps=[];$('tap').textContent='Tap tempo (cast speakers)'};
+
+// progress bar bits + tonearm state
+const npi=$('npi'),npc=$('npc'),npd=$('npd');let lastSec=-3,prog=.15,armT=0;
+const fmt=s=>(s/60|0)+':'+String(s%60|0).padStart(2,'0');
+
+// render
+// Song clock. New readings arrive late and a little uneven, so never jump the clock: nudge it gently toward
+// each reading, and only snap on a real seek / track change / pause. (Fixes fill jitter + lyrics bouncing back.)
+function syncClock(pos,playing,lag){
+ const now=performance.now(),cur=SP.prog+(SP.playing?(now-SP.at)/1000:0),target=pos+(playing?lag:0);
+ if(!playing||SP.prog<0||Math.abs(target-cur)>2.5){SP.prog=target}else{SP.prog=cur+(target-cur)*.15}
+ SP.at=now;SP.playing=playing;
+}
+let lastCt=-1,lastId=null; // lyric time only ever moves forward unless it's a genuine seek
+let spec=null;const WN=96,wv=new Float32Array(WN); // spectrum for the sound wave (null when there's no live audio)
+let bass=0,mid=0,hi=0,pulse=0,t=0;
+const blobs=Array.from({length:7},(_,i)=>({a:Math.random()*6.28,s:.08+Math.random()*.15,r:.35+Math.random()*.3,c:i%3}));
+function frame(now){
+ t=now/1000;
+ let b=0,m=0,h=0;spec=null;
+ if(demo){
+  const k=(now-demoT0)/1000,beat=Math.pow(Math.max(0,Math.sin(k*Math.PI*2*1.9)),6);
+  b=beat*.9;m=.35+.2*Math.sin(k*2);h=.25+.2*Math.sin(k*5);
+ }else if(live||(an&&!au.paused)){
+  const A=live?anL:an,D=live?dataL:data;A.getByteFrequencyData(D);spec=D;
+  const n=D.length,avg=(a,z)=>{let s=0;for(let i=a;i<z;i++)s+=D[i];return s/(z-a)/255};
+  b=avg(1,8);m=avg(8,60);h=avg(60,n);
+ }else if(tapOn){
+  const ph=(((now-tapT0)/60000*bpm)%1+1)%1;
+  b=.15+(ph<.15?.8*(1-ph/.15):0);m=.3;h=.2;
+ }else if(autoBpm&&SP.on&&SP.id&&SP.playing){
+  // pulse locked to the song position using Spotify's BPM; Beat nudge slides the grid if it's off
+  const ph=((((SP.prog+(now-SP.at)/1000)*autoBpm/60+(+$('bn').value))%1)+1)%1;
+  b=.15+(ph<.15?.8*(1-ph/.15):0);m=.3;h=.2;
+ }
+ const R=+$('re').value,G=+$('gi').value;
+ bass+=(b-bass)*(b>bass?.6:.12);mid+=(m-mid)*.2;hi+=(h-hi)*.25;
+ pulse=flashOn?Math.min(1,bass*R*1.4):0; // Beat flash off = no flashing or pumping, just the steady glow
+
+ // beat detection: bass jumps above its running average
+ bAvg+=(b-bAvg)*.05;pk=Math.max(b,pk*.996);
+ if(flashOn&&b>bAvg*1.1+.015&&b>pk*.6&&b>.03&&now-lastBeat>170){flash=1;lastBeat=now}
+ flash*=.86;
+ if(live&&++dbgN%8===0)$('dbg').textContent=`audio in: ${(b*100)|0}%  ${b>.01?'signal ok':'NO SIGNAL, re-share with "Share system audio" ticked'}`;
+ ctx.globalCompositeOperation='source-over';
+ ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+ ctx.globalCompositeOperation='lighter';
+ // screen edges glow in the cover's dominant colour, pumping on the beat
+ // Glow intensity = resting brightness/size of the edge light. Reactivity = how hard the beat adds on top.
+ const e=.45*G+pulse*.6+flash*1.2*R, th=Math.min(W,H)*(.1+.06*G+pulse*.05+flash*.14*R), dc=colors[0];
+ if(flash>.03){ctx.fillStyle=`rgba(${dc},${flash*.16*R})`;ctx.fillRect(0,0,W,H)}
+ [[0,0,0,th],[0,H,0,-th],[0,0,th,0],[W,0,-th,0]].forEach(([x0,y0,dx,dy])=>{
+  const gr=ctx.createLinearGradient(x0,y0,x0+dx,y0+dy);
+  gr.addColorStop(0,`rgba(${dc},${Math.min(.95,e*.7)})`);gr.addColorStop(.35,`rgba(${dc},${Math.min(.5,e*.25)})`);gr.addColorStop(1,`rgba(${dc},0)`);
+  ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+ });
+ ctx.globalCompositeOperation='source-over';
+
+ // sound wave: three flowing layered waves driven by the live spectrum (or the beat pulse when there's no audio to read)
+ if(waveOn){
+  const x0=W>H*1.1?W*.02+H*.55:W*.06,x1=W*.97,cyW=H*.5;
+  for(let i=0;i<WN;i++){
+   let tgt;
+   if(spec){const n=spec.length,k=Math.min(n-2,1+Math.floor(Math.pow(i/WN,1.8)*n*.55));tgt=(spec[k]+spec[k+1])/510}
+   else tgt=(.05+b*.9)*(.55+.45*Math.sin(i*.35+t*2.1));
+   wv[i]+=(tgt-wv[i])*(tgt>wv[i]?.5:.12);
+  }
+  const amp=H*.17*(.35+.65*R);
+  ctx.globalCompositeOperation='lighter';ctx.lineJoin='round';
+  for(let k=0;k<3;k++){
+   ctx.beginPath();
+   for(let i=0;i<=WN;i++){
+    const u=i/WN,x=x0+(x1-x0)*u,e=Math.sin(Math.PI*u),v=wv[Math.min(i,WN-1)];
+    const y=cyW+Math.sin(u*(9+k*3)+t*(1.4+k*.7)+k*2)*v*amp*(1-k*.22)*e;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+   }
+   ctx.strokeStyle=`rgba(${colors[k]},${.55-k*.12})`;ctx.lineWidth=Math.max(1.5,H*(.006-k*.0014));ctx.stroke();
+  }
+  ctx.globalCompositeOperation='source-over';
+ }
+
+ // vinyl disc
+ {
+  const dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+  const playing=SP.on&&SP.id&&!demo?SP.playing:(demo||live||!au.paused);
+  spd+=((playing?1.3:0)-spd)*Math.min(1,dt*3);
+  ang+=dt*spd+flash*.02*R;
+  const wide=W>H*1.1,cx=wide?W*.02:W/2,cy=wide?H*.5:H*.08;
+  const r=(wide?H*.5:W*.46)*(1+flash*.04*R); // wide layout: record is exactly as tall as the window
+  const key=artOn+'|'+artN+'|'+colors[0]+'|'+colors[2];
+  if(key!==discKey){discKey=key;bakeDisc()}
+  ctx.save();ctx.translate(cx,cy);
+  // cheap halo (gradient instead of shadowBlur)
+  ctx.globalCompositeOperation='lighter';
+  const hr=r*(1.25+pulse*.15),hg=ctx.createRadialGradient(0,0,r*.9,0,0,hr);
+  hg.addColorStop(0,`rgba(${colors[0]},${.3+pulse*.3})`);hg.addColorStop(1,`rgba(${colors[0]},0)`);
+  ctx.fillStyle=hg;ctx.beginPath();ctx.arc(0,0,hr,0,6.2832);ctx.fill();
+  ctx.globalCompositeOperation='source-over';
+  ctx.rotate(ang);ctx.drawImage(dsk,-r,-r,r*2,r*2);
+  ctx.restore();
+  // tonearm: swings onto the record while playing and creeps inward as the song progresses
+  if(wide){
+   armT+=((playing?1:0)-armT)*Math.min(1,dt*2.2);
+   const Px=cx+r*1.08,Py=cy-r*.62,Lk=r*.98,rho=r*(.93-.43*Math.min(1,prog));
+   let th=0,best=9;
+   for(let q=0;q<=1.4;q+=.01){const dd=Math.abs(Math.hypot(Px-Lk*Math.sin(q)-cx,Py+Lk*Math.cos(q)-cy)-rho);if(dd<best){best=dd;th=q}}
+   const a=th*armT*armT*(3-2*armT),hx=Px-Lk*Math.sin(a),hy=Py+Lk*Math.cos(a);
+   const phi=Math.atan2(hy-Py,hx-Px),w=r*.024,tl=Lk-r*.11,SH='rgba(0,0,0,.4)';
+   for(let pass=0;pass<2;pass++){ // pass 0 = drop shadow, pass 1 = the arm itself
+    ctx.save();
+    if(!pass)ctx.translate(r*.03,r*.045);
+    ctx.translate(Px,Py);ctx.rotate(phi);
+    const lg=(y0,y1,stops)=>{if(!pass)return SH;const g=ctx.createLinearGradient(0,y0,0,y1);stops.forEach((s,i)=>g.addColorStop(i/(stops.length-1),s));return g};
+    // tube (runs back past the pivot to the counterweight)
+    ctx.fillStyle=lg(-w/2,w/2,['#6a6e7d','#f7f8fc','#c2c5d0','#5f6372']);
+    ctx.fillRect(-r*.27,-w/2,r*.27+tl,w);
+    // counterweight with grooves
+    ctx.fillStyle=lg(-r*.047,r*.047,['#16171e','#5f6272','#2a2b35','#14151b']);
+    ctx.fillRect(-r*.28,-r*.047,r*.13,r*.094);
+    if(pass){ctx.fillStyle='rgba(255,255,255,.16)';for(let k=0;k<3;k++)ctx.fillRect(-r*.265+k*r*.036,-r*.047,r*.005,r*.094)}
+    // pivot plinth: dark base, chrome ring, knob
+    ctx.fillStyle=SH;
+    if(pass){const bg=ctx.createRadialGradient(0,0,r*.02,0,0,r*.095);bg.addColorStop(0,'#2b2c37');bg.addColorStop(1,'#101117');ctx.fillStyle=bg}
+    ctx.beginPath();ctx.arc(0,0,r*.095,0,6.2832);ctx.fill();
+    if(pass){
+     ctx.strokeStyle='#c9ccd6';ctx.lineWidth=r*.01;ctx.beginPath();ctx.arc(0,0,r*.082,0,6.2832);ctx.stroke();
+     const kg=ctx.createRadialGradient(-r*.012,-r*.012,r*.004,0,0,r*.05);kg.addColorStop(0,'#ffffff');kg.addColorStop(.5,'#b5b8c4');kg.addColorStop(1,'#5b5f6e');
+     ctx.fillStyle=kg;ctx.beginPath();ctx.arc(0,0,r*.05,0,6.2832);ctx.fill();
+     ctx.fillStyle='#1a1b22';ctx.beginPath();ctx.arc(0,0,r*.012,0,6.2832);ctx.fill();
+    }
+    // angled headshell + cartridge + stylus
+    ctx.translate(tl,0);ctx.rotate(.35);
+    ctx.fillStyle=lg(-r*.022,r*.022,['#f4f5f8','#b6b9c5']);ctx.fillRect(-r*.005,-r*.022,r*.115,r*.044);
+    if(pass){
+     ctx.fillStyle=`rgb(${colors[0]})`;ctx.fillRect(r*.012,-r*.006,r*.07,r*.012);
+     ctx.fillStyle='#14151b';ctx.fillRect(r*.045,-r*.028,r*.068,r*.056);
+     ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(r*.113,0,r*.007,0,6.2832);ctx.fill();
+    }
+    ctx.restore();
+   }
+  }
+  // lyrics + now-playing live in the space to the right of the record and its tonearm
+  const npEl=$('np');
+  if(wide){
+   const left=Math.round((W*.02+H*.6)*innerWidth/W+24); // clears the disc and the tonearm pivot
+   if(npEl.dataset.v!==String(left)){
+    npEl.dataset.v=String(left);
+    npEl.style.left=left+'px';npEl.style.width=Math.max(260,innerWidth-left-40)+'px';npEl.style.bottom='6vh';
+    stage.style.paddingLeft=left+'px';stage.style.paddingRight='40px';
+   }
+   stage.style.paddingTop='0';
+  }else{
+   if(npEl.dataset.v){npEl.dataset.v='';npEl.style.left=npEl.style.width=npEl.style.bottom=''}
+   stage.style.paddingLeft='7vw';stage.style.paddingRight='7vw';stage.style.paddingTop='34vh';
+  }
+ }
+
+ // now-playing progress bar
+ {
+  let cur=0,dur=0;
+  if(SP.on&&SP.id&&!demo){dur=SP.dur||0;cur=SP.prog+(SP.playing?(now-SP.at)/1000:0)}
+  else if(!demo&&au.duration){dur=au.duration;cur=au.currentTime}
+  if(dur>0){
+   if(cur>dur)cur=dur;npi.style.transform=`scaleX(${cur/dur})`;
+   const sec=Math.floor(cur);if(sec!==lastSec){lastSec=sec;npc.textContent=fmt(cur);npd.textContent=fmt(dur)}
+  }else if(lastSec!==-2){lastSec=-2;npi.style.transform='scaleX(0)';npc.textContent=npd.textContent=''}
+  prog=dur>0?cur/dur:.15;
+  // the big button shows pause while a song is playing, play otherwise
+  const isPl=SP.on&&SP.id&&!demo?SP.playing:(demo||live||!au.paused);
+  if(isPl!==lastPl){lastPl=isPl;$('cpp').firstChild.innerHTML=isPl?'<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>':'<path d="M8 5v14l11-7z"/>'}
+ }
+
+ // lyric sync
+ if(L.length){
+  const base=SP.on&&SP.id&&!demo?SP.prog+(SP.playing?(now-SP.at)/1000:0):demo?(now-demoT0)/1000:au.currentTime;
+  if(SP.id!==lastId){lastId=SP.id;lastCt=-1}
+  let ct=base+offset;
+  if(ct<lastCt&&lastCt-ct<1.5)ct=lastCt;else lastCt=ct;
+  let i=-1;for(let k=0;k<L.length;k++){if(L[k].t<=ct)i=k;else break}
+  if(demo&&ct>L[L.length-1].t+5){demoT0=now}
+  if(i!==idx){idx=i;show(i)}
+  if(karOn&&i>=0&&words.length){ // karaoke fill: estimate word timing across the line's duration
+   // sung time = syllables x half a beat (tempo from Spotify/tap, else 120 BPM), capped by the gap to the next line
+   const nxt=L[i+1]?L[i+1].t:L[i].t+6,gap=Math.max(.6,Math.min(nxt-L[i].t,10));
+   const bl=60/((autoBpm&&SP.on)?autoBpm:tapOn?bpm:120),syl=Math.max(words.length,words.total/3.2);
+   const dur=Math.max(.5,Math.min(gap*.92,syl*bl*.5));
+   const pos=Math.min(1,Math.max(0,(ct-L[i].t)/dur))*words.total;
+   for(const w of words){const f=Math.round(Math.min(1,Math.max(0,(pos-w.st)/w.len))*100);if(f!==w.f){w.f=f;w.s.style.setProperty('--f',(f*1.2-10)+'%')}}
+  }
+ }
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// keys
+// idle cleanup: hide the cursor + hint after 3s of no mouse movement, panel starts hidden in fullscreen
+let idleT;const wake=()=>{document.body.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>document.body.classList.add('idle'),3000)};
+addEventListener('mousemove',wake);wake();
+document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement)$('panel').classList.add('hide')});
+addEventListener('keydown',e=>{
+ if(['TEXTAREA','INPUT'].includes(e.target.tagName))return;
+ const k=e.key.toLowerCase();
+ if(k==='h')$('panel').classList.toggle('hide');
+ if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+});
+// ---- Local mode: read what THIS PC is playing (Windows) via server.py. No Spotify account needed. ----
+// Reuses the SP state object so lyrics sync, progress bar, spin and tonearm all work unchanged.
+let locKey='',locFails=0,locT=null;
+const cleanTitle=s=>(s||'').replace(/\s*[\(\[][^\)\]]*(official|video|audio|lyrics?|visuali[sz]er|remaster|hd|4k|mv)[^\)\]]*[\)\]]/gi,'').replace(/\s*[-–]\s*(official|lyrics?).*$/i,'').trim();
+const getJ=async u=>{try{const r=await fetch(u);return r.ok?await r.json():null}catch(e){return null}};
+// Lyric lookup (LRCLIB). Spotify's own lyrics are licensed and not available, so we try hard to match instead:
+// exact title, then a simplified title (no "feat.", "Remastered", "- 2011 Version"...), then fuzzy search, and as a last
+// resort un-timed lyrics spread evenly over the song (flagged as estimated).
+let lrcEst=false;
+const estNote=()=>{const a=$('npa');if(a&&!a.textContent.includes('estimated'))a.textContent+=(a.textContent?' · ':'')+'estimated timing'};
+const simplify=s=>(s||'')
+ .replace(/\s*[\(\[][^\)\]]*(feat|ft\.?|with|remaster|version|edit|mix|live|deluxe|bonus|mono|stereo|explicit|radio|from )[^\)\]]*[\)\]]/gi,'')
+ .replace(/\s+-\s+(remaster(ed)?|\d{4}|single|radio|live|mono|stereo|.*version|.*mix|.*edit|from ).*$/i,'')
+ .replace(/\s{2,}/g,' ').trim();
+function plainToLrc(plain,dur){
+ const lines=plain.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!lines.length)return '';
+ const total=dur>0?dur:lines.length*3.8+12,start=Math.min(15,total*.08),span=Math.max(lines.length*1.5,total*.92-start),step=span/lines.length;
+ return lines.map((s,i)=>{const t=start+i*step;return '['+String(t/60|0).padStart(2,'0')+':'+(t%60).toFixed(2).padStart(5,'0')+'] '+s}).join('\n');
+}
+async function lrcSearch(title,artist,album,dur){
+ lrcEst=false;
+ const Q='https://lrclib.net/api/',P=o=>new URLSearchParams(o),a1=(artist||'').split(/[,&]/)[0].trim();
+ const tries=[[title,artist],[simplify(title),a1],[simplify(title),'']]
+  .filter((x,i,a)=>x[0]&&a.findIndex(y=>y[0]===x[0]&&y[1]===x[1])===i);
+ let plain=null;
+ for(const [t,a] of tries){
+  if(a){
+   const g={track_name:t,artist_name:a};if(album)g.album_name=album;if(dur>0)g.duration=Math.round(dur);
+   const j=await getJ(Q+'get?'+P(g));
+   if(j?.syncedLyrics)return j.syncedLyrics;
+   if(!plain&&j?.plainLyrics)plain=j.plainLyrics;
+  }
+  let list=a?await getJ(Q+'search?'+P({track_name:t,artist_name:a})):null;
+  if(!list?.length)list=await getJ(Q+'search?'+P({q:(t+' '+a).trim()}))||[];
+  const ok=list.filter(x=>x.syncedLyrics);
+  if(ok.length){if(dur>0)ok.sort((x,y)=>Math.abs(x.duration-dur)-Math.abs(y.duration-dur));return ok[0].syncedLyrics}
+  if(!plain){const pl=list.find(x=>x.plainLyrics);if(pl)plain=pl.plainLyrics}
+ }
+ if(plain){lrcEst=true;return plainToLrc(plain,dur)}
+ return '';
+}
+async function artFor(title,artist){ // album cover from Apple's public search (no key)
+ const j=await getJ('https://itunes.apple.com/search?'+new URLSearchParams({term:artist+' '+title,entity:'song',limit:5}));
+ const a0=artist.toLowerCase().split(/[,&]/)[0].trim();
+ const hit=j?.results?.find(x=>{const n=x.artistName.toLowerCase();return n.includes(a0)||a0.includes(n)});
+ if(hit)palFromArt(hit.artworkUrl100.replace('100x100','600x600'));
+}
+async function locPoll(){
+ try{
+  const r=await fetch('/api/nowplaying',{cache:'no-store'});if(!r.ok)throw 0;
+  const j=await r.json();locFails=0;
+  if(!j.title){SP.playing=false;return}
+  const browser=/chrome|msedge|firefox|brave|opera|vivaldi/i.test(j.app||'');
+  let title=cleanTitle(j.title),artist=(j.artist||'').replace(/\s*-\s*Topic$/i,'').replace(/VEVO$/i,'').trim();
+  if((browser||!artist)&&title.includes(' - ')){const k=title.indexOf(' - ');artist=title.slice(0,k).trim();title=title.slice(k+3).trim()}
+  const key=title+'|'+artist,now=performance.now();
+  SP.dur=j.dur>0?j.dur:0;
+  if(key!==locKey){
+   locKey=key;SP.on=true;SP.id='loc:'+key;demo=false;au.pause();artOn=false;autoBpm=0;
+   SP.prog=j.pos>=0?j.pos:0;SP.at=now;SP.playing=j.playing;
+   $('wiz').hidden=true;$('dbg').textContent='';
+   setNP(title,artist);
+   L=[];idx=-2;show(-1);
+   artFor(title,artist);
+   lrcSearch(title,artist,j.album,j.dur).then(t=>{
+    if(locKey!==key)return;
+    if(t){$('lrc').value=t;applyLRC();if(lrcEst)estNote()}
+    else noLyrics(title,artist);
+   });
+  }
+  if(j.pos>=0)syncClock(j.pos,j.playing,j.ts?Math.max(0,(Date.now()-j.ts)/1000):.5);
+  else{ // browsers often hide their position; then we keep our own clock
+   if(SP.playing!==j.playing){if(SP.playing)SP.prog+=(now-SP.at)/1000;SP.at=now}
+   SP.playing=j.playing;
+  }
+  spSt('Following this PC\'s player'+(j.app?': '+j.app.split('!').pop().replace(/\.exe$/i,''):'')+'.');
+ }catch(e){
+  if(++locFails>=3){clearInterval(locT);spSt(location.protocol.startsWith('http')?'Could not read this PC\'s player.':'Plain-file mode: use "Search a song" below, or get the Lyric Glow app for auto-detect.')}
+ }
+}
+if(!localStorage.lg_ref&&!HOSTED){locT=setInterval(locPoll,1000);locPoll()}
+else if(HOSTED&&!localStorage.lg_ref)spSt('Web version: use "Search a song", or connect Spotify. Get the Windows app to auto-detect what your PC is playing.');
+
+// ---- Manual mode: type a song, get lyrics + cover, press Start. Works anywhere, even as a plain double-clicked file. ----
+$('qgo').onclick=async()=>{
+ const t=$('qt').value.trim(),a=$('qa').value.trim();if(!t)return;
+ const btn=$('qgo');btn.textContent='Searching…';
+ demo=false;au.pause();SP.on=true;SP.id='man:'+t+'|'+a;SP.playing=false;SP.prog=0;SP.at=performance.now();SP.dur=0;
+ artOn=false;autoBpm=0;$('qplay').textContent='▶ Start';
+ setNP(t,a);L=[];idx=-2;show(-1);
+ artFor(t,a);
+ const key=SP.id,lrc=await lrcSearch(t,a,'',0);
+ if(SP.id===key){
+  if(lrc){$('lrc').value=lrc;applyLRC();if(lrcEst)estNote()}
+  else noLyrics(t,a);
+ }
+ btn.textContent='Find lyrics + cover';
+};
+['qt','qa'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter')$('qgo').click()}));
+$('qplay').onclick=()=>{
+ const n=performance.now();
+ if(SP.playing){SP.prog+=(n-SP.at)/1000;SP.playing=false;$('qplay').textContent='▶ Start'}
+ else{SP.at=n;SP.playing=true;$('qplay').textContent='⏸ Pause'}
+};
+$('qrst').onclick=()=>{SP.prog=0;SP.at=performance.now()};
+
+// first-run setup wizard
+const wiz=$('wiz');
+$('wr').textContent=REDIR;
+$('wcid').value=localStorage.lg_cid||'';
+const openWiz=()=>{
+ $('wmsg').textContent=location.protocol.startsWith('http')?'':'Spotify login needs the Lyric Glow app. From a plain file, use "Search a song" instead.';
+ wiz.hidden=false;
+};
+$('wopen').onclick=openWiz;
+$('wcp').onclick=async()=>{try{await navigator.clipboard.writeText(REDIR);$('wcp').textContent='Copied ✓'}catch(e){$('wcp').textContent='Select + Ctrl+C'}setTimeout(()=>$('wcp').textContent='Copy',2000)};
+$('wgo').onclick=()=>{
+ const v=$('wcid').value.trim();
+ if(!/^[0-9a-f]{32}$/i.test(v))return $('wmsg').textContent='That doesn\'t look like a Client ID (32 letters and numbers). Copy it from your app\'s Settings.';
+ if(!location.protocol.startsWith('http'))return $('wmsg').textContent='Spotify login needs the Lyric Glow app. From a plain file, use "Search a song" instead.';
+ $('cid').value=v;$('spc').click();
+};
+$('wskip').onclick=()=>{wiz.hidden=true;try{localStorage.lg_skip=1}catch(e){}};
+if(HOSTED){
+ $('wskip').textContent='Skip, use Search a song';
+ $('wnote').textContent='No Spotify account, or can\'t be bothered? Skip this and use "Search a song" in the panel. To auto-detect what your PC is playing, get the Windows app from the home page.';
+}
+if(location.protocol.startsWith('http')&&!localStorage.lg_ref&&!localStorage.lg_skip&&!location.search.includes('code='))openWiz();
+if(!localStorage.lg_ref)$('demo').click();
+</script>
+</body>
+</html>

@@ -109,7 +109,7 @@ audio{width:100%;height:34px}
    <li><b>Paste your Client ID</b> (app Settings → Client ID):
     <input id="wcid" placeholder="Client ID" autocomplete="off" spellcheck="false"></li>
   </ol>
-  <div style="font-size:12.5px;opacity:.6;margin-bottom:10px;line-height:1.5">No Spotify account, or can't be bothered? Skip this. Lyric Glow can read what your PC is playing (Spotify app, YouTube, Apple Music, etc.) on Windows.</div>
+  <div id="wnote" style="font-size:12.5px;opacity:.6;margin-bottom:10px;line-height:1.5">No Spotify account, or can't be bothered? Skip this. Lyric Glow can read what your PC is playing (Spotify app, YouTube, Apple Music, etc.) on Windows.</div>
   <div id="wmsg"></div>
   <div class="wb"><button class="btn primary" id="wgo">Connect Spotify</button><button class="btn" id="wskip">Skip, use my PC's player</button></div>
   <div class="by">Made by Chaz</div>
@@ -273,6 +273,8 @@ $('demo').onclick=()=>{au.pause();demo=true;demoT0=performance.now();$('lrc').va
 // ---- Spotify (PKCE, no backend) ----
 const SP={on:false,prog:0,at:0,playing:false,id:null};
 const REDIR=location.origin+location.pathname;
+// true when served from a real website (not this PC): it can't see your other apps, so no auto-detect there
+const HOSTED=location.protocol.startsWith('http')&&!/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
 $('ruri').textContent=REDIR;
 const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 try{$('cid').value=localStorage.lg_cid||''}catch(e){}
@@ -732,7 +734,8 @@ async function locPoll(){
   if(++locFails>=3){clearInterval(locT);spSt(location.protocol.startsWith('http')?'Could not read this PC\'s player.':'Plain-file mode: use "Search a song" below, or get the Lyric Glow app for auto-detect.')}
  }
 }
-if(!localStorage.lg_ref){locT=setInterval(locPoll,1000);locPoll()}
+if(!localStorage.lg_ref&&!HOSTED){locT=setInterval(locPoll,1000);locPoll()}
+else if(HOSTED&&!localStorage.lg_ref)spSt('Web version: use "Search a song", or connect Spotify. Get the Windows app to auto-detect what your PC is playing.');
 
 // ---- Manual mode: type a song, get lyrics + cover, press Start. Works anywhere, even as a plain double-clicked file. ----
 $('qgo').onclick=async()=>{
@@ -774,6 +777,10 @@ $('wgo').onclick=()=>{
  $('cid').value=v;$('spc').click();
 };
 $('wskip').onclick=()=>{wiz.hidden=true;try{localStorage.lg_skip=1}catch(e){}};
+if(HOSTED){
+ $('wskip').textContent='Skip, use Search a song';
+ $('wnote').textContent='No Spotify account, or can\'t be bothered? Skip this and use "Search a song" in the panel. To auto-detect what your PC is playing, get the Windows app from the home page.';
+}
 if(location.protocol.startsWith('http')&&!localStorage.lg_ref&&!localStorage.lg_skip&&!location.search.includes('code='))openWiz();
 if(!localStorage.lg_ref)$('demo').click();
 </script>
