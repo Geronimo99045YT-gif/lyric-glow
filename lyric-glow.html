@@ -19,6 +19,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 #np{position:fixed;left:42vw;bottom:7vh;width:40vw;max-width:640px;pointer-events:none;text-align:center}
 .nokar .w{background:none;-webkit-text-fill-color:#fff}
 .nobar #np .bar,.nobar #np .tm{display:none}
+#np .ctl{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:14px;pointer-events:auto}
+#np .ctl button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--txt);display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .15s,background .2s,box-shadow .2s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#np .ctl button svg{width:18px;height:18px;fill:currentColor}
+#np .ctl button:hover{background:rgba(255,255,255,.18);transform:scale(1.08)}
+#np .ctl button:active{transform:scale(.94)}
+#np .ctl #cpp{width:48px;height:48px;border:none;background:linear-gradient(135deg,var(--c1),var(--c2));box-shadow:0 6px 22px color-mix(in srgb,var(--c1) 45%,transparent)}
+#np .ctl #cpp svg{width:22px;height:22px}
+.noctl #np .ctl{display:none}
 .inp{width:100%;margin-bottom:8px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt);font-size:13px;font-family:inherit}
 .chk{display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-size:13px;opacity:.85;margin:0;cursor:pointer}
 .chk input{accent-color:var(--c1);width:16px;height:16px}
@@ -78,7 +86,12 @@ audio{width:100%;height:34px}
   <div class="ln cur" id="lc"></div>
   <div class="ln next" id="ln"></div>
 </div>
-<div id="np"><div class="t" id="npt"></div><div class="a" id="npa"></div><div class="bar"><i id="npi"></i></div><div class="tm"><span id="npc"></span><span id="npd"></span></div></div>
+<div id="np"><div class="t" id="npt"></div><div class="a" id="npa"></div><div class="bar"><i id="npi"></i></div><div class="tm"><span id="npc"></span><span id="npd"></span></div>
+ <div class="ctl" id="npctl">
+  <button id="cprev" title="Previous"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM20 6v12L9.5 12z"/></svg></button>
+  <button id="cpp" title="Play / pause"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+  <button id="cnext" title="Next"><svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM4 6v12l10.5-6z"/></svg></button>
+ </div></div>
 <div id="dbg" style="position:fixed;right:20px;bottom:14px;font:11px ui-monospace,Consolas,monospace;opacity:.45;pointer-events:none"></div>
 <div id="by">Made by <b>Chaz</b></div>
 <div id="wiz" hidden>
@@ -144,7 +157,7 @@ audio{width:100%;height:34px}
     <label>Palette</label>
     <div class="pal" id="pal"></div>
   </div>
-  <div class="row" style="gap:10px 18px;flex-wrap:wrap"><label class="chk"><input type="checkbox" id="kar" checked>Karaoke fill</label><label class="chk"><input type="checkbox" id="pbar" checked>Progress bar</label><label class="chk"><input type="checkbox" id="fl" checked>Beat flash</label><label class="chk"><input type="checkbox" id="wave" checked>Sound wave</label></div>
+  <div class="row" style="gap:10px 18px;flex-wrap:wrap"><label class="chk"><input type="checkbox" id="kar" checked>Karaoke fill</label><label class="chk"><input type="checkbox" id="pbar" checked>Progress bar</label><label class="chk"><input type="checkbox" id="fl" checked>Beat flash</label><label class="chk"><input type="checkbox" id="wave" checked>Sound wave</label><label class="chk"><input type="checkbox" id="ctl" checked>Player controls</label></div>
   <div><label>Glow intensity</label><input type="range" id="gi" min="0.3" max="2" step="0.05" value="1"></div>
   <div><label>Reactivity</label><input type="range" id="re" min="0" max="2" step="0.05" value="1"></div>
   <div><label>Lyric offset (s)</label><input type="range" id="off" min="-3" max="3" step="0.1" value="0"></div>
@@ -217,9 +230,9 @@ try{const s=JSON.parse(localStorage.lg_set||'{}');SET.forEach(k=>{if(s[k]!=null)
 SET.forEach(k=>$(k).addEventListener('input',()=>{try{localStorage.lg_set=JSON.stringify(Object.fromEntries(SET.map(k=>[k,$(k).value])))}catch(e){}}));
 
 // toggles (karaoke fill, progress bar), remembered between sessions
-let karOn=true,flashOn=true,waveOn=true;const TG=['kar','pbar','fl','wave'];
+let karOn=true,flashOn=true,waveOn=true;const TG=['kar','pbar','fl','wave','ctl'];
 try{const s=JSON.parse(localStorage.lg_tg||'{}');TG.forEach(k=>{if(s[k]!=null)$(k).checked=s[k]})}catch(e){}
-const applyTG=()=>{karOn=$('kar').checked;flashOn=$('fl').checked;waveOn=$('wave').checked;document.body.classList.toggle('nokar',!karOn);document.body.classList.toggle('nobar',!$('pbar').checked)};
+const applyTG=()=>{karOn=$('kar').checked;flashOn=$('fl').checked;waveOn=$('wave').checked;document.body.classList.toggle('nokar',!karOn);document.body.classList.toggle('nobar',!$('pbar').checked);document.body.classList.toggle('noctl',!$('ctl').checked)};
 TG.forEach(k=>$(k).addEventListener('change',()=>{applyTG();try{localStorage.lg_tg=JSON.stringify(Object.fromEntries(TG.map(k=>[k,$(k).checked])))}catch(e){}}));
 applyTG();
 
@@ -385,7 +398,10 @@ async function ctrl(cmd){
  if(await winCtrl(cmd)){setTimeout(()=>{(localStorage.lg_ref?poll:locPoll)()},450)}
  else tmsg('Controls need the Lyric Glow app (or serve.bat). A plain HTML file can\'t control other apps.');
 }
-$('tpp').onclick=()=>ctrl('playpause');$('tnext').onclick=()=>ctrl('next');$('tprev').onclick=()=>ctrl('prev');
+$('tpp').onclick=$('cpp').onclick=()=>ctrl('playpause');
+$('tnext').onclick=$('cnext').onclick=()=>ctrl('next');
+$('tprev').onclick=$('cprev').onclick=()=>ctrl('prev');
+let lastPl=null;
 function startSpotify(){SP.on=true;$('spc').textContent='Connected ✓';poll();setInterval(poll,2500)}
 (async()=>{
  const code=new URLSearchParams(location.search).get('code');
@@ -590,6 +606,9 @@ function frame(now){
    const sec=Math.floor(cur);if(sec!==lastSec){lastSec=sec;npc.textContent=fmt(cur);npd.textContent=fmt(dur)}
   }else if(lastSec!==-2){lastSec=-2;npi.style.transform='scaleX(0)';npc.textContent=npd.textContent=''}
   prog=dur>0?cur/dur:.15;
+  // the big button shows pause while a song is playing, play otherwise
+  const isPl=SP.on&&SP.id&&!demo?SP.playing:(demo||live||!au.paused);
+  if(isPl!==lastPl){lastPl=isPl;$('cpp').firstChild.innerHTML=isPl?'<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>':'<path d="M8 5v14l11-7z"/>'}
  }
 
  // lyric sync
