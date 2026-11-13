@@ -7,6 +7,9 @@ Animated, karaoke-style lyrics, a spinning vinyl and beat-reactive edge lighting
 - Lyrics sync to the song and fill in word by word (toggleable)
 - Full-height vinyl with the album cover as the label, a tonearm that creeps across as the song plays
 - Edge glow in the cover's dominant colour that flashes on the beat (toggleable)
+- Flowing sound-wave visualiser driven by the live spectrum (toggleable)
+- Play / pause / next / previous from the panel or with `Space` / `N` / `B`: through Windows' media controls (any player, no Premium), or through Spotify's API if you're connected (Premium, also works for cast speakers)
+- Better lyric matching, with an "estimated timing" fallback when only un-timed lyrics exist
 - Reads what's playing from **Spotify** or straight from **your PC** (Windows), no account needed
 - Lyrics from [LRCLIB](https://lrclib.net), cover art from Apple's public search, BPM from [ReccoBeats](https://reccobeats.com)
 
