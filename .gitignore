@@ -1,0 +1,7 @@
+node_modules/
+dist/
+__pycache__/
+*.exe
+*.zip
+app/lyric-glow.html
+app/nowplaying.ps1

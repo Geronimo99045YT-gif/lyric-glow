@@ -1,0 +1,44 @@
+{
+  "name": "lyric-glow",
+  "version": "1.0.0",
+  "description": "Animated lyrics, a spinning vinyl and beat-reactive lighting. Made by Chaz.",
+  "author": "Chaz",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "sync": "node sync.js",
+    "start": "node sync.js && electron .",
+    "build": "node sync.js && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.chaz.lyricglow",
+    "productName": "Lyric Glow",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "lyric-glow.html",
+      "icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "nowplaying.ps1",
+        "to": "nowplaying.ps1"
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico",
+      "signExecutable": false
+    },
+    "portable": {
+      "artifactName": "Lyric-Glow.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
+  }
+}
