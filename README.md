@@ -2,7 +2,7 @@
 
 Animated, karaoke-style lyrics, a spinning vinyl and beat-reactive edge lighting for whatever you're listening to. Inspired by those "desk setup" reels, built from scratch.
 
-**Made by Chaz.**
+**Made by Chaz.** If you enjoy it, there's a ☕ Donate button in the app, or support it on [Ko-fi](https://ko-fi.com/raptormakesstuff).
 
 - Lyrics sync to the song and fill in word by word (toggleable)
 - Full-height vinyl with the album cover as the label, a tonearm that creeps across as the song plays
