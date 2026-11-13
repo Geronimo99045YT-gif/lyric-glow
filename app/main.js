@@ -83,6 +83,22 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
 
+    if (process.env.LG_CAPTURE_TEST) { // self-test: run the real capture path and report what the analyser hears
+      const tw = new BrowserWindow({ width: 900, height: 500, show: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } });
+      await tw.loadURL(`http://127.0.0.1:${port}/lyric-glow.html`);
+      await new Promise(r => setTimeout(r, 1500));
+      const out = await tw.webContents.executeJavaScript(`(async()=>{
+        document.getElementById('live').click();
+        await new Promise(r=>setTimeout(r,2500));
+        let peak=0,n=0;for(let i=0;i<30;i++){await new Promise(r=>setTimeout(r,100));const d=new Uint8Array(anL.frequencyBinCount);anL.getByteFrequencyData(d);const m=Math.max(...d);if(m>peak)peak=m;n++}
+        return JSON.stringify({live, peakLevel:peak, acState:ac.state, dbg:document.getElementById('dbg').textContent, status:document.getElementById('spst').textContent,
+          tracks:(capStream?capStream.getTracks().map(t=>t.kind+':'+t.readyState):null)});
+      })()`, true).catch(e => 'ERR ' + e);
+      console.log('CAPTURE_TEST ' + out);
+      app.quit();
+      return;
+    }
+
     Menu.setApplicationMenu(null);
     win = new BrowserWindow({
       width: 1280, height: 760, minWidth: 720, minHeight: 480,

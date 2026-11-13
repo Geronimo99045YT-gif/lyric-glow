@@ -425,13 +425,14 @@ let live=false,anL,dataL,capStream,pk=.1,dbgN=0;
 $('live').onclick=async()=>{
  try{
   initAudio();await ac.resume();
-  const s=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
-  if(!s.getAudioTracks().length){s.getTracks().forEach(t=>t.stop());return spSt('No audio shared. Tick "Share system/tab audio" in the picker.')}
+  // hint Chrome/Edge to open on "Entire screen" with system audio on (a single *window* can never share audio)
+  const s=await navigator.mediaDevices.getDisplayMedia({video:{displaySurface:'monitor'},audio:true,systemAudio:'include',monitorTypeSurfaces:'include',selfBrowserSurface:'exclude'});
+  if(!s.getAudioTracks().length){s.getTracks().forEach(t=>t.stop());return spSt('No audio came through. In the picker choose the "Entire screen" tab (NOT "Window") and switch on "Also share system audio". Easier: use the Lyric Glow app, it does this automatically.')}
   capStream=s; // keep the whole stream alive; stopping the video track can kill the audio too
   anL=ac.createAnalyser();anL.fftSize=512;anL.smoothingTimeConstant=.45;dataL=new Uint8Array(anL.frequencyBinCount);
   ac.createMediaStreamSource(new MediaStream(s.getAudioTracks())).connect(anL); // analyser only, not routed to speakers
   live=true;demo=false;$('live').textContent='System audio live ✓';
- }catch(e){spSt('Capture cancelled.')}
+ }catch(e){spSt('Capture cancelled. Tip: pick "Entire screen" and tick "Also share system audio". (Mac browsers can\'t share system audio, only a tab\'s audio.)')}
 };
 
 // tap tempo: a steady pulse for when there's no audio to analyse (e.g. Spotify on a cast speaker)
