@@ -5,3 +5,4 @@ __pycache__/
 *.zip
 app/lyric-glow.html
 app/nowplaying.ps1
+app/appaudio.ps1

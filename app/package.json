@@ -26,6 +26,10 @@
       {
         "from": "nowplaying.ps1",
         "to": "nowplaying.ps1"
+      },
+      {
+        "from": "appaudio.ps1",
+        "to": "appaudio.ps1"
       }
     ],
     "win": {

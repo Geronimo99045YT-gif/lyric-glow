@@ -3,11 +3,36 @@
 // reads what Windows is playing via nowplaying.ps1, and auto-grants system-audio capture.
 const { app, BrowserWindow, session, desktopCapturer, shell, Menu } = require('electron');
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 
 let latest = '{"playing":false}', ps = null, server = null, win = null;
 
 const psPath = () => app.isPackaged ? path.join(process.resourcesPath, 'nowplaying.ps1') : path.join(__dirname, 'nowplaying.ps1');
+
+// ---- per-app audio (Windows process loopback) via appaudio.ps1 ----
+const appAudioPath = () => app.isPackaged ? path.join(process.resourcesPath, 'appaudio.ps1') : path.join(__dirname, 'appaudio.ps1');
+const EMPTY_SPEC = '{"b":[]}';
+let latestSpec = EMPTY_SPEC, capProc = null;
+function stopCap() {
+  if (capProc) { try { capProc.kill(); } catch (e) {} capProc = null; }
+  latestSpec = EMPTY_SPEC;
+}
+function startCap(pid) {
+  stopCap();
+  const p = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', appAudioPath(), 'capture', String(pid)], { windowsHide: true });
+  capProc = p;
+  let buf = '';
+  p.stdout.on('data', d => {
+    buf += d;
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const l = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (l.startsWith('{')) latestSpec = l;
+    }
+  });
+  p.on('error', () => {});
+  p.on('exit', () => { if (capProc === p) { capProc = null; latestSpec = EMPTY_SPEC; } });
+}
 
 function startPS() {
   if (process.platform !== 'win32') return;
@@ -36,6 +61,23 @@ function listen(port) {
           try { fs.writeFileSync(path.join(os.tmpdir(), 'lyricglow_cmd.txt'), cmd); r.writeHead(204); } catch (e) { r.writeHead(500); }
         } else r.writeHead(403);
         r.end();
+      } else if (u === '/api/audiotarget' && q.method === 'POST') {
+        // choose which app's audio drives the beat/wave (pid 0 = everything). Same guard as /api/control.
+        const pid = parseInt(new URL(q.url, 'http://x').searchParams.get('pid'), 10);
+        const okOrigin = !q.headers.origin || /^http:\/\/127\.0\.0\.1:\d+$/.test(q.headers.origin);
+        if (q.headers['x-lg'] === '1' && okOrigin && Number.isInteger(pid) && pid >= 0 && pid < 4194304) {
+          if (pid > 0) startCap(pid); else stopCap();
+          r.writeHead(204);
+        } else r.writeHead(403);
+        r.end();
+      } else if (u === '/api/audioapps') {
+        execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', appAudioPath(), 'list'], { windowsHide: true, timeout: 20000 }, (err, out) => {
+          r.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+          r.end(err ? '[]' : ((out || '').trim() || '[]'));
+        });
+      } else if (u === '/api/spectrum') {
+        r.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+        r.end(latestSpec);
       } else if (u === '/api/nowplaying') {
         r.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         r.end(latest);
@@ -116,5 +158,5 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => { try { ps && ps.kill(); } catch (e) {} try { server && server.close(); } catch (e) {} });
+  app.on('before-quit', () => { stopCap(); try { ps && ps.kill(); } catch (e) {} try { server && server.close(); } catch (e) {} });
 }
