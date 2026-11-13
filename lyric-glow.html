@@ -13,6 +13,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 .ln{font-weight:900;letter-spacing:-.02em;line-height:1.1;transition:all .6s cubic-bezier(.2,.8,.2,1);opacity:.0;transform:translateY(14px) scale(.96);filter:blur(6px)}
 .prev,.next{font-size:clamp(20px,3vw,40px);opacity:.3;filter:blur(1.5px);transform:none}
 .cur{font-size:clamp(36px,6.5vw,104px);opacity:1;filter:none;transform:none}
+/* no-lyrics card: song name (big) / artist / faded "Lyrics unavailable" */
+.next.artist{font-size:clamp(22px,3.2vw,46px);opacity:.78;filter:none}
+.nolyr{font-size:clamp(15px,1.8vw,24px);font-weight:700;letter-spacing:.04em;opacity:.34;filter:none;transform:none;margin-top:-.6vh}
 .w{background:linear-gradient(90deg,#fff calc(var(--f,-10%) - 10%),rgba(255,255,255,.28) calc(var(--f,-10%) + 10%));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .cur.pop{animation:pop .6s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes pop{from{opacity:0;transform:translateY(24px) scale(.94);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
@@ -85,6 +88,7 @@ audio{width:100%;height:34px}
   <div class="ln prev" id="lp"></div>
   <div class="ln cur" id="lc"></div>
   <div class="ln next" id="ln"></div>
+  <div class="ln nolyr" id="lu"></div>
 </div>
 <div id="np"><div class="t" id="npt"></div><div class="a" id="npa"></div><div class="bar"><i id="npi"></i></div><div class="tm"><span id="npc"></span><span id="npd"></span></div>
  <div class="ctl" id="npctl">
@@ -250,6 +254,7 @@ function setCur(txt){ // one span per word so the karaoke fill can sweep through
 }
 function show(i){
  lp.textContent=L[i-1]?.s||'';ln.textContent=L[i+1]?.s||'';
+ ln.classList.remove('artist');$('lu').textContent='';
  if(i>=0)setCur(L[i].s);else{lc.textContent='';words=[]}
  lc.classList.remove('pop');void lc.offsetWidth;lc.classList.add('pop');
  [lp,lc,ln].forEach(e=>e.style.opacity='');
@@ -296,9 +301,11 @@ async function fetchLyrics(t){
  const id=t.id,txt=await lrcSearch(t.name,t.artists[0].name,t.album.name,t.duration_ms/1000);
  if(SP.id!==id)return; // song changed while we were searching
  if(txt){$('lrc').value=txt;applyLRC();if(lrcEst)estNote();return}
+ noLyrics(t.name,t.artists[0].name);
+}
+function noLyrics(title,artist){ // song name, artist underneath, then a faded "Lyrics unavailable"
  $('lrc').value='';L=[];idx=-2;show(-1);
- // no lyrics anywhere: show a title card instead
- lc.textContent=t.name;lp.textContent='';ln.textContent=t.artists[0].name+' · no lyrics found';
+ lp.textContent='';lc.textContent=title;ln.textContent=artist||'';ln.classList.add('artist');$('lu').textContent='Lyrics unavailable';
 }
 // BPM lookup. Spotify closed its own audio-features endpoint to new apps, so ask ReccoBeats (free, keyed by Spotify track id)
 let autoBpm=0;
@@ -711,7 +718,7 @@ async function locPoll(){
    lrcSearch(title,artist,j.album,j.dur).then(t=>{
     if(locKey!==key)return;
     if(t){$('lrc').value=t;applyLRC();if(lrcEst)estNote()}
-    else{$('lrc').value='';L=[];idx=-2;show(-1);lc.textContent=title;lp.textContent='';ln.textContent=artist+' · no lyrics found'}
+    else noLyrics(title,artist);
    });
   }
   if(j.pos>=0)syncClock(j.pos,j.playing,j.ts?Math.max(0,(Date.now()-j.ts)/1000):.5);
@@ -737,7 +744,7 @@ $('qgo').onclick=async()=>{
  const key=SP.id,lrc=await lrcSearch(t,a,'',0);
  if(SP.id===key){
   if(lrc){$('lrc').value=lrc;applyLRC();if(lrcEst)estNote()}
-  else{$('lrc').value='';L=[];idx=-2;show(-1);lc.textContent=t;lp.textContent='';ln.textContent=(a?a+' · ':'')+'no lyrics found'}
+  else noLyrics(t,a);
  }
  btn.textContent='Find lyrics + cover';
 };
