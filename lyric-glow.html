@@ -274,15 +274,12 @@ async function token(){
  await tokenReq({grant_type:'refresh_token',refresh_token:localStorage.lg_ref});return localStorage.lg_tok;
 }
 async function fetchLyrics(t){
- try{
-  const q=new URLSearchParams({track_name:t.name,artist_name:t.artists[0].name,album_name:t.album.name,duration:Math.round(t.duration_ms/1000)});
-  const r=await fetch('https://lrclib.net/api/get?'+q);
-  if(!r.ok)throw 0;const j=await r.json();
-  if(j.syncedLyrics){$('lrc').value=j.syncedLyrics;applyLRC();return}
- }catch(e){}
+ const id=t.id,txt=await lrcSearch(t.name,t.artists[0].name,t.album.name,t.duration_ms/1000);
+ if(SP.id!==id)return; // song changed while we were searching
+ if(txt){$('lrc').value=txt;applyLRC();if(lrcEst)estNote();return}
  $('lrc').value='';L=[];idx=-2;show(-1);
- // no synced lyrics: show a title card instead
- lc.textContent=t.name;lp.textContent='';ln.textContent=t.artists[0].name+' · no synced lyrics';
+ // no lyrics anywhere: show a title card instead
+ lc.textContent=t.name;lp.textContent='';ln.textContent=t.artists[0].name+' · no lyrics found';
 }
 // BPM lookup. Spotify closed its own audio-features endpoint to new apps, so ask ReccoBeats (free, keyed by Spotify track id)
 let autoBpm=0;
@@ -570,16 +567,41 @@ addEventListener('keydown',e=>{
 let locKey='',locFails=0,locT=null;
 const cleanTitle=s=>(s||'').replace(/\s*[\(\[][^\)\]]*(official|video|audio|lyrics?|visuali[sz]er|remaster|hd|4k|mv)[^\)\]]*[\)\]]/gi,'').replace(/\s*[-–]\s*(official|lyrics?).*$/i,'').trim();
 const getJ=async u=>{try{const r=await fetch(u);return r.ok?await r.json():null}catch(e){return null}};
+// Lyric lookup (LRCLIB). Spotify's own lyrics are licensed and not available, so we try hard to match instead:
+// exact title, then a simplified title (no "feat.", "Remastered", "- 2011 Version"...), then fuzzy search, and as a last
+// resort un-timed lyrics spread evenly over the song (flagged as estimated).
+let lrcEst=false;
+const estNote=()=>{const a=$('npa');if(a&&!a.textContent.includes('estimated'))a.textContent+=(a.textContent?' · ':'')+'estimated timing'};
+const simplify=s=>(s||'')
+ .replace(/\s*[\(\[][^\)\]]*(feat|ft\.?|with|remaster|version|edit|mix|live|deluxe|bonus|mono|stereo|explicit|radio|from )[^\)\]]*[\)\]]/gi,'')
+ .replace(/\s+-\s+(remaster(ed)?|\d{4}|single|radio|live|mono|stereo|.*version|.*mix|.*edit|from ).*$/i,'')
+ .replace(/\s{2,}/g,' ').trim();
+function plainToLrc(plain,dur){
+ const lines=plain.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!lines.length)return '';
+ const total=dur>0?dur:lines.length*3.8+12,start=Math.min(15,total*.08),span=Math.max(lines.length*1.5,total*.92-start),step=span/lines.length;
+ return lines.map((s,i)=>{const t=start+i*step;return '['+String(t/60|0).padStart(2,'0')+':'+(t%60).toFixed(2).padStart(5,'0')+'] '+s}).join('\n');
+}
 async function lrcSearch(title,artist,album,dur){
- const Q='https://lrclib.net/api/';
- const j=await getJ(Q+'get?'+new URLSearchParams({track_name:title,artist_name:artist,album_name:album||'',duration:Math.round(dur||0)}));
- if(j?.syncedLyrics)return j.syncedLyrics;
- let list=await getJ(Q+'search?'+new URLSearchParams({track_name:title,artist_name:artist}));
- if(!list?.length)list=await getJ(Q+'search?'+new URLSearchParams({q:title+' '+artist}))||[];
- const ok=list.filter(x=>x.syncedLyrics);
- if(!ok.length)return '';
- if(dur>0)ok.sort((a,b)=>Math.abs(a.duration-dur)-Math.abs(b.duration-dur));
- return ok[0].syncedLyrics;
+ lrcEst=false;
+ const Q='https://lrclib.net/api/',P=o=>new URLSearchParams(o),a1=(artist||'').split(/[,&]/)[0].trim();
+ const tries=[[title,artist],[simplify(title),a1],[simplify(title),'']]
+  .filter((x,i,a)=>x[0]&&a.findIndex(y=>y[0]===x[0]&&y[1]===x[1])===i);
+ let plain=null;
+ for(const [t,a] of tries){
+  if(a){
+   const g={track_name:t,artist_name:a};if(album)g.album_name=album;if(dur>0)g.duration=Math.round(dur);
+   const j=await getJ(Q+'get?'+P(g));
+   if(j?.syncedLyrics)return j.syncedLyrics;
+   if(!plain&&j?.plainLyrics)plain=j.plainLyrics;
+  }
+  let list=a?await getJ(Q+'search?'+P({track_name:t,artist_name:a})):null;
+  if(!list?.length)list=await getJ(Q+'search?'+P({q:(t+' '+a).trim()}))||[];
+  const ok=list.filter(x=>x.syncedLyrics);
+  if(ok.length){if(dur>0)ok.sort((x,y)=>Math.abs(x.duration-dur)-Math.abs(y.duration-dur));return ok[0].syncedLyrics}
+  if(!plain){const pl=list.find(x=>x.plainLyrics);if(pl)plain=pl.plainLyrics}
+ }
+ if(plain){lrcEst=true;return plainToLrc(plain,dur)}
+ return '';
 }
 async function artFor(title,artist){ // album cover from Apple's public search (no key)
  const j=await getJ('https://itunes.apple.com/search?'+new URLSearchParams({term:artist+' '+title,entity:'song',limit:5}));
@@ -606,8 +628,8 @@ async function locPoll(){
    artFor(title,artist);
    lrcSearch(title,artist,j.album,j.dur).then(t=>{
     if(locKey!==key)return;
-    if(t){$('lrc').value=t;applyLRC()}
-    else{$('lrc').value='';L=[];idx=-2;show(-1);lc.textContent=title;lp.textContent='';ln.textContent=artist+' · no synced lyrics'}
+    if(t){$('lrc').value=t;applyLRC();if(lrcEst)estNote()}
+    else{$('lrc').value='';L=[];idx=-2;show(-1);lc.textContent=title;lp.textContent='';ln.textContent=artist+' · no lyrics found'}
    });
   }
   if(j.pos>=0)syncClock(j.pos,j.playing,j.ts?Math.max(0,(Date.now()-j.ts)/1000):.5);
@@ -632,8 +654,8 @@ $('qgo').onclick=async()=>{
  artFor(t,a);
  const key=SP.id,lrc=await lrcSearch(t,a,'',0);
  if(SP.id===key){
-  if(lrc){$('lrc').value=lrc;applyLRC()}
-  else{$('lrc').value='';L=[];idx=-2;show(-1);lc.textContent=t;lp.textContent='';ln.textContent=(a?a+' · ':'')+'no synced lyrics found'}
+  if(lrc){$('lrc').value=lrc;applyLRC();if(lrcEst)estNote()}
+  else{$('lrc').value='';L=[];idx=-2;show(-1);lc.textContent=t;lp.textContent='';ln.textContent=(a?a+' · ':'')+'no lyrics found'}
  }
  btn.textContent='Find lyrics + cover';
 };
