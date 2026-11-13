@@ -138,7 +138,7 @@ audio{width:100%;height:34px}
     <label>Palette</label>
     <div class="pal" id="pal"></div>
   </div>
-  <div class="row" style="gap:10px 18px;flex-wrap:wrap"><label class="chk"><input type="checkbox" id="kar" checked>Karaoke fill</label><label class="chk"><input type="checkbox" id="pbar" checked>Progress bar</label><label class="chk"><input type="checkbox" id="fl" checked>Beat flash</label></div>
+  <div class="row" style="gap:10px 18px;flex-wrap:wrap"><label class="chk"><input type="checkbox" id="kar" checked>Karaoke fill</label><label class="chk"><input type="checkbox" id="pbar" checked>Progress bar</label><label class="chk"><input type="checkbox" id="fl" checked>Beat flash</label><label class="chk"><input type="checkbox" id="wave" checked>Sound wave</label></div>
   <div><label>Glow intensity</label><input type="range" id="gi" min="0.3" max="2" step="0.05" value="1"></div>
   <div><label>Reactivity</label><input type="range" id="re" min="0" max="2" step="0.05" value="1"></div>
   <div><label>Lyric offset (s)</label><input type="range" id="off" min="-3" max="3" step="0.1" value="0"></div>
@@ -211,9 +211,9 @@ try{const s=JSON.parse(localStorage.lg_set||'{}');SET.forEach(k=>{if(s[k]!=null)
 SET.forEach(k=>$(k).addEventListener('input',()=>{try{localStorage.lg_set=JSON.stringify(Object.fromEntries(SET.map(k=>[k,$(k).value])))}catch(e){}}));
 
 // toggles (karaoke fill, progress bar), remembered between sessions
-let karOn=true,flashOn=true;const TG=['kar','pbar','fl'];
+let karOn=true,flashOn=true,waveOn=true;const TG=['kar','pbar','fl','wave'];
 try{const s=JSON.parse(localStorage.lg_tg||'{}');TG.forEach(k=>{if(s[k]!=null)$(k).checked=s[k]})}catch(e){}
-const applyTG=()=>{karOn=$('kar').checked;flashOn=$('fl').checked;document.body.classList.toggle('nokar',!karOn);document.body.classList.toggle('nobar',!$('pbar').checked)};
+const applyTG=()=>{karOn=$('kar').checked;flashOn=$('fl').checked;waveOn=$('wave').checked;document.body.classList.toggle('nokar',!karOn);document.body.classList.toggle('nobar',!$('pbar').checked)};
 TG.forEach(k=>$(k).addEventListener('change',()=>{applyTG();try{localStorage.lg_tg=JSON.stringify(Object.fromEntries(TG.map(k=>[k,$(k).checked])))}catch(e){}}));
 applyTG();
 
@@ -397,16 +397,17 @@ function syncClock(pos,playing,lag){
  SP.at=now;SP.playing=playing;
 }
 let lastCt=-1,lastId=null; // lyric time only ever moves forward unless it's a genuine seek
+let spec=null;const WN=96,wv=new Float32Array(WN); // spectrum for the sound wave (null when there's no live audio)
 let bass=0,mid=0,hi=0,pulse=0,t=0;
 const blobs=Array.from({length:7},(_,i)=>({a:Math.random()*6.28,s:.08+Math.random()*.15,r:.35+Math.random()*.3,c:i%3}));
 function frame(now){
  t=now/1000;
- let b=0,m=0,h=0;
+ let b=0,m=0,h=0;spec=null;
  if(demo){
   const k=(now-demoT0)/1000,beat=Math.pow(Math.max(0,Math.sin(k*Math.PI*2*1.9)),6);
   b=beat*.9;m=.35+.2*Math.sin(k*2);h=.25+.2*Math.sin(k*5);
  }else if(live||(an&&!au.paused)){
-  const A=live?anL:an,D=live?dataL:data;A.getByteFrequencyData(D);
+  const A=live?anL:an,D=live?dataL:data;A.getByteFrequencyData(D);spec=D;
   const n=D.length,avg=(a,z)=>{let s=0;for(let i=a;i<z;i++)s+=D[i];return s/(z-a)/255};
   b=avg(1,8);m=avg(8,60);h=avg(60,n);
  }else if(tapOn){
@@ -439,6 +440,29 @@ function frame(now){
   ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
  });
  ctx.globalCompositeOperation='source-over';
+
+ // sound wave: three flowing layered waves driven by the live spectrum (or the beat pulse when there's no audio to read)
+ if(waveOn){
+  const x0=W>H*1.1?W*.02+H*.55:W*.06,x1=W*.97,cyW=H*.5;
+  for(let i=0;i<WN;i++){
+   let tgt;
+   if(spec){const n=spec.length,k=Math.min(n-2,1+Math.floor(Math.pow(i/WN,1.8)*n*.55));tgt=(spec[k]+spec[k+1])/510}
+   else tgt=(.05+b*.9)*(.55+.45*Math.sin(i*.35+t*2.1));
+   wv[i]+=(tgt-wv[i])*(tgt>wv[i]?.5:.12);
+  }
+  const amp=H*.17*(.35+.65*R);
+  ctx.globalCompositeOperation='lighter';ctx.lineJoin='round';
+  for(let k=0;k<3;k++){
+   ctx.beginPath();
+   for(let i=0;i<=WN;i++){
+    const u=i/WN,x=x0+(x1-x0)*u,e=Math.sin(Math.PI*u),v=wv[Math.min(i,WN-1)];
+    const y=cyW+Math.sin(u*(9+k*3)+t*(1.4+k*.7)+k*2)*v*amp*(1-k*.22)*e;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+   }
+   ctx.strokeStyle=`rgba(${colors[k]},${.55-k*.12})`;ctx.lineWidth=Math.max(1.5,H*(.006-k*.0014));ctx.stroke();
+  }
+  ctx.globalCompositeOperation='source-over';
+ }
 
  // vinyl disc
  {
