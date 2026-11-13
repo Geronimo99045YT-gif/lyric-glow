@@ -2,7 +2,7 @@
 // Runs the page from a tiny local server (Spotify login needs an http://127.0.0.1 address),
 // reads what Windows is playing via nowplaying.ps1, and auto-grants system-audio capture.
 const { app, BrowserWindow, session, desktopCapturer, shell, Menu } = require('electron');
-const http = require('http'), fs = require('fs'), path = require('path');
+const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const { spawn } = require('child_process');
 
 let latest = '{"playing":false}', ps = null, server = null, win = null;
@@ -28,7 +28,15 @@ function listen(port) {
   return new Promise((resolve, reject) => {
     const s = http.createServer((q, r) => {
       const u = q.url.split('?')[0];
-      if (u === '/api/nowplaying') {
+      if (u === '/api/control' && q.method === 'POST') {
+        // play/pause/skip via the Windows media session. POST + custom header + same-origin check, so other websites can't trigger it.
+        const cmd = new URL(q.url, 'http://x').searchParams.get('cmd');
+        const okOrigin = !q.headers.origin || /^http:\/\/127\.0\.0\.1:\d+$/.test(q.headers.origin);
+        if (q.headers['x-lg'] === '1' && okOrigin && ['playpause', 'play', 'pause', 'next', 'prev'].includes(cmd)) {
+          try { fs.writeFileSync(path.join(os.tmpdir(), 'lyricglow_cmd.txt'), cmd); r.writeHead(204); } catch (e) { r.writeHead(500); }
+        } else r.writeHead(403);
+        r.end();
+      } else if (u === '/api/nowplaying') {
         r.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         r.end(latest);
       } else if (u === '/' || u === '/lyric-glow.html') {

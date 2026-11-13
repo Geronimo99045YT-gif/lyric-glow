@@ -1,7 +1,7 @@
 """Lyric Glow local server (made by Chaz).
 Serves the page and, on Windows, exposes what the PC is currently playing at /api/nowplaying
 by running nowplaying.ps1 in the background. Everything stays on this machine."""
-import atexit, http.server, os, subprocess, sys, threading
+import atexit, http.server, os, re, subprocess, sys, tempfile, threading, urllib.parse
 
 PORT = 8888
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -32,6 +32,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(latest)
         else:
             super().do_GET()
+    def do_POST(self):
+        # play/pause/skip via the Windows media session. POST + custom header + same-origin check,
+        # so other websites can't trigger it.
+        parsed = urllib.parse.urlparse(self.path)
+        cmd = urllib.parse.parse_qs(parsed.query).get('cmd', [''])[0]
+        origin = self.headers.get('Origin', '')
+        ok_origin = (not origin) or re.fullmatch(r'http://127\.0\.0\.1:\d+', origin)
+        if (parsed.path == '/api/control' and self.headers.get('X-LG') == '1' and ok_origin
+                and cmd in ('playpause', 'play', 'pause', 'next', 'prev')):
+            try:
+                with open(os.path.join(tempfile.gettempdir(), 'lyricglow_cmd.txt'), 'w') as f:
+                    f.write(cmd)
+                self.send_response(204)
+            except OSError:
+                self.send_response(500)
+        else:
+            self.send_response(403)
+        self.end_headers()
     def log_message(self, *a):
         pass
 

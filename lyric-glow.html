@@ -102,6 +102,12 @@ audio{width:100%;height:34px}
 
 <div id="panel">
   <h1><i></i>Lyric Glow</h1>
+  <div class="row" id="transport" style="align-items:stretch">
+    <button class="btn" id="tprev" title="Previous (B)">⏮</button>
+    <button class="btn primary" id="tpp" title="Play / pause (Space)">⏯</button>
+    <button class="btn" id="tnext" title="Next (N)">⏭</button>
+  </div>
+  <small id="tmsg" style="margin-top:-8px;min-height:14px"></small>
   <div id="spbox">
     <label>Spotify</label>
     <button class="btn" id="wopen" style="margin-bottom:8px">Setup guide</button>
@@ -261,7 +267,7 @@ $('spc').onclick=async()=>{
  localStorage.lg_ver=ver;
  const ch=b64(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(ver)));
  location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({client_id:cid,response_type:'code',redirect_uri:REDIR,
-  scope:'user-read-currently-playing user-read-playback-state',code_challenge_method:'S256',code_challenge:ch});
+  scope:'user-read-currently-playing user-read-playback-state user-modify-playback-state',code_challenge_method:'S256',code_challenge:ch});
 };
 async function tokenReq(body){
  const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:localStorage.lg_cid,...body})});
@@ -346,6 +352,40 @@ async function poll(){
   spSt(SP.playing?'Connected, following Spotify.':'Connected, nothing playing.');
  }catch(e){spSt('Spotify error: '+e.message)}
 }
+// ---- Transport controls: play/pause, next, previous ----
+// On this PC (Spotify app, YouTube, anything with media controls) we use Windows' media session via /api/control: no Premium
+// needed. If you're connected to Spotify we use Spotify's own API first (works for cast speakers too, needs Premium + the
+// "modify playback" permission), and fall back to Windows' controls.
+let tmT;const tmsg=t=>{$('tmsg').textContent=t;clearTimeout(tmT);tmT=setTimeout(()=>$('tmsg').textContent='',5000)};
+async function winCtrl(cmd){
+ try{const r=await fetch('/api/control?cmd='+cmd,{method:'POST',headers:{'X-LG':'1'}});return r.status===204}catch(e){return false}
+}
+async function spotifyCtrl(cmd){
+ const tk=await token();let m='POST',p='';
+ if(cmd==='next')p='next';else if(cmd==='prev')p='previous';
+ else{m='PUT';p=(cmd==='play'||(cmd==='playpause'&&!SP.playing))?'play':'pause'}
+ const r=await fetch('https://api.spotify.com/v1/me/player/'+p,{method:m,headers:{Authorization:'Bearer '+tk}});
+ if(r.status===403){let why='';try{why=(await r.json()).error?.message||''}catch(e){}
+  return /premium/i.test(why)?'premium':'scope'}
+ return r.ok||r.status===204||r.status===202?'ok':'fail';
+}
+async function ctrl(cmd){
+ if(au.currentSrc){ // playing one of your own audio files
+  if(cmd==='playpause'||cmd==='play'||cmd==='pause')au.paused?au.play():au.pause();return;
+ }
+ if(String(SP.id).startsWith('man:')){if(cmd==='playpause')$('qplay').click();return}
+ if(localStorage.lg_ref){
+  try{
+   const res=await spotifyCtrl(cmd);
+   if(res==='ok'){setTimeout(poll,450);return}
+   if(res==='premium')tmsg('Spotify only allows remote control on Premium. Trying this PC instead...');
+   if(res==='scope')tmsg('Reconnect Spotify once (new permission) for remote control. Trying this PC instead...');
+  }catch(e){}
+ }
+ if(await winCtrl(cmd)){setTimeout(()=>{(localStorage.lg_ref?poll:locPoll)()},450)}
+ else tmsg('Controls need the Lyric Glow app (or serve.bat). A plain HTML file can\'t control other apps.');
+}
+$('tpp').onclick=()=>ctrl('playpause');$('tnext').onclick=()=>ctrl('next');$('tprev').onclick=()=>ctrl('prev');
 function startSpotify(){SP.on=true;$('spc').textContent='Connected ✓';poll();setInterval(poll,2500)}
 (async()=>{
  const code=new URLSearchParams(location.search).get('code');
@@ -584,7 +624,9 @@ addEventListener('keydown',e=>{
  const k=e.key.toLowerCase();
  if(k==='h')$('panel').classList.toggle('hide');
  if(k==='f')document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
- if(k===' '){e.preventDefault();au.paused?au.play():au.pause()}
+ if(k===' '){e.preventDefault();ctrl('playpause')}
+ if(k==='n')ctrl('next');
+ if(k==='b')ctrl('prev');
 });
 // ---- Local mode: read what THIS PC is playing (Windows) via server.py. No Spotify account needed. ----
 // Reuses the SP state object so lyrics sync, progress bar, spin and tonearm all work unchanged.
