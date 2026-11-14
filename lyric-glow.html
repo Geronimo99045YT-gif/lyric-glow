@@ -17,7 +17,35 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 .next.artist{font-size:clamp(22px,3.2vw,46px);opacity:.78;filter:none}
 .nolyr{font-size:clamp(15px,1.8vw,24px);font-weight:700;letter-spacing:.04em;opacity:.34;filter:none;transform:none;margin-top:-.6vh}
 .w{background:linear-gradient(90deg,#fff calc(var(--f,-10%) - 10%),rgba(255,255,255,.28) calc(var(--f,-10%) + 10%));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.cur.pop{animation:pop .6s cubic-bezier(.2,.9,.3,1.2)}
+/* ---- lyric entrance styles (picked in the panel; "wheel" is a 3D picker drum, the rest animate the current line) ---- */
+.ln2{display:none}
+.cur.an-pop{animation:pop .6s cubic-bezier(.2,.9,.3,1.2)}
+.cur.an-insta{transform:rotate(calc(var(--rot,0deg)*.4))}
+.cur.an-insta .w{display:inline-block;animation:instaPop .62s cubic-bezier(.2,1.5,.4,1) both;animation-delay:calc(var(--i,0)*60ms)}
+@keyframes instaPop{0%{opacity:0;transform:translateY(.55em) rotate(var(--wr,0deg)) scale(.35)}60%{opacity:1;transform:translateY(-.06em) rotate(calc(var(--wr,0deg)*-.35)) scale(1.14)}100%{opacity:1;transform:rotate(calc(var(--wr,0deg)*.18)) scale(1)}}
+.cur.an-slideL{animation:slideL .6s cubic-bezier(.2,.9,.25,1)}
+.cur.an-slideR{animation:slideR .6s cubic-bezier(.2,.9,.25,1)}
+@keyframes slideL{from{opacity:0;transform:translateX(-22vw) skewX(-12deg);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes slideR{from{opacity:0;transform:translateX(22vw) skewX(12deg);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+.cur.an-flip{animation:flip .7s cubic-bezier(.2,.9,.25,1);transform-origin:50% 100%}
+@keyframes flip{from{opacity:0;transform:perspective(900px) rotateX(-85deg) translateY(30px)}to{opacity:1;transform:none}}
+.cur.an-zoom{animation:zoomIn .55s cubic-bezier(.15,.9,.25,1)}
+@keyframes zoomIn{from{opacity:0;transform:scale(2.4);filter:blur(14px)}to{opacity:1;transform:none;filter:none}}
+.cur.an-drop{animation:dropIn .75s cubic-bezier(.3,1.4,.5,1)}
+@keyframes dropIn{from{opacity:0;transform:translateY(-14vh) rotate(var(--rot,-4deg))}to{opacity:1;transform:none}}
+/* wheel: five lines on a drum, rolling up as the song moves on */
+body[data-ls=wheel] #stage{perspective:1100px;gap:.8vh}
+body[data-ls=wheel] .ln2{display:block}
+body[data-ls=wheel] .wslot{transform:rotateX(var(--rx,0deg)) scale(var(--s,1));opacity:var(--o,1);filter:none;transition:none;font-size:clamp(22px,3.6vw,52px)}
+body[data-ls=wheel] #lc{font-size:clamp(36px,6.5vw,104px)}
+#lp2{--rx:64deg;--s:.6;--o:.14}
+#lp{--rx:36deg;--s:.82;--o:.4}
+#lc{--rx:0deg;--s:1;--o:1}
+#ln{--rx:-36deg;--s:.82;--o:.4}
+#ln2{--rx:-64deg;--s:.6;--o:.14}
+body[data-ls=wheel] #ln.artist{--rx:0deg;--s:1;--o:.78}
+body[data-ls=wheel] .wslot.roll{animation:wroll .65s cubic-bezier(.2,.9,.25,1) both}
+@keyframes wroll{from{opacity:calc(var(--o,1)*.4);transform:translateY(8vh) rotateX(calc(var(--rx,0deg) + 34deg)) scale(calc(var(--s,1)*.82))}to{opacity:var(--o,1);transform:rotateX(var(--rx,0deg)) scale(var(--s,1))}}
 @keyframes pop{from{opacity:0;transform:translateY(24px) scale(.94);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
 #np{position:fixed;left:42vw;bottom:7vh;width:40vw;max-width:640px;pointer-events:none;text-align:center}
 .nokar .w{background:none;-webkit-text-fill-color:#fff}
@@ -89,9 +117,11 @@ audio{width:100%;height:34px}
 <body>
 <canvas id="cv"></canvas>
 <div id="stage">
-  <div class="ln prev" id="lp"></div>
-  <div class="ln cur" id="lc"></div>
-  <div class="ln next" id="ln"></div>
+  <div class="ln ln2 wslot" id="lp2"></div>
+  <div class="ln prev wslot" id="lp"></div>
+  <div class="ln cur wslot" id="lc"></div>
+  <div class="ln next wslot" id="ln"></div>
+  <div class="ln ln2 wslot" id="ln2"></div>
   <div class="ln nolyr" id="lu"></div>
 </div>
 <div id="np"><div class="t" id="npt"></div><div class="a" id="npa"></div><div class="bar"><i id="npi"></i></div><div class="tm"><span id="npc"></span><span id="npd"></span></div>
@@ -167,6 +197,20 @@ audio{width:100%;height:34px}
     <input type="file" id="lrcin" accept=".lrc,.txt" hidden>
   </div>
   <div>
+    <label>Lyric style (how lines come in)</label>
+    <select class="inp" id="lstyle" style="margin-bottom:0">
+      <option value="pop">Pop (classic)</option>
+      <option value="insta">Insta pop (tilted words)</option>
+      <option value="wheel">Wheel (3D roll)</option>
+      <option value="slide">Slide through</option>
+      <option value="flip">Flip up</option>
+      <option value="zoom">Zoom in</option>
+      <option value="drop">Drop in</option>
+      <option value="song">Shuffle per song (new style each song)</option>
+      <option value="random">Shuffle per line (different every line)</option>
+    </select>
+  </div>
+  <div>
     <label>Palette</label>
     <div class="pal" id="pal"></div>
   </div>
@@ -239,7 +283,7 @@ $('lrcin').onchange=async e=>{const f=e.target.files[0];if(f){$('lrc').value=awa
 $('off').oninput=e=>offset=+e.target.value;
 
 // saved settings
-const SET=['gi','re','off','bn'];
+const SET=['gi','re','off','bn','lstyle'];
 try{const s=JSON.parse(localStorage.lg_set||'{}');SET.forEach(k=>{if(s[k]!=null)$(k).value=s[k]});offset=+$('off').value}catch(e){}
 SET.forEach(k=>$(k).addEventListener('input',()=>{try{localStorage.lg_set=JSON.stringify(Object.fromEntries(SET.map(k=>[k,$(k).value])))}catch(e){}}));
 
@@ -257,18 +301,39 @@ function setCur(txt){ // one span per word so the karaoke fill can sweep through
  const ws=txt.split(/\s+/).filter(Boolean);
  ws.forEach((w,i)=>{
   const s=document.createElement('span');s.className='w';s.textContent=w;lc.appendChild(s);
+  s.style.setProperty('--i',i);s.style.setProperty('--wr',(Math.random()*22-11).toFixed(1)+'deg'); // used by the Insta pop style
   if(i<ws.length-1)lc.appendChild(document.createTextNode(' '));
   words.push({s,st:pos,len:w.length+1,f:-1});pos+=w.length+1;
  });
  words.total=pos||1;
 }
+const lp2=$('lp2'),ln2=$('ln2'),RAND=['pop','insta','slideL','slideR','flip','zoom','drop'];
+const SONG=['pop','insta','wheel','slide','flip','zoom','drop'];let songKey=null,songAnim='pop';
+function lyricStyle(i){ // which entrance this line uses
+ const v=$('lstyle').value;
+ if(v==='song'){ // pick a style when a new song starts (never the same twice running) and keep it for the whole song
+  const k=SP.id||au.currentSrc||'demo';
+  if(k!==songKey){songKey=k;let n;do{n=SONG[Math.random()*SONG.length|0]}while(n===songAnim);songAnim=n}
+  return songAnim==='slide'?(i%2?'slideR':'slideL'):songAnim;
+ }
+ if(v==='random')return RAND[Math.random()*RAND.length|0];
+ if(v==='slide')return i%2?'slideR':'slideL'; // alternate sides
+ return v;
+}
 function show(i){
- lp.textContent=L[i-1]?.s||'';ln.textContent=L[i+1]?.s||'';
+ const a=lyricStyle(i);
+ document.body.dataset.ls=a==='wheel'?'wheel':'flat';
+ lp2.textContent=L[i-2]?.s||'';lp.textContent=L[i-1]?.s||'';ln.textContent=L[i+1]?.s||'';ln2.textContent=L[i+2]?.s||'';
  ln.classList.remove('artist');$('lu').textContent='';
+ lc.style.setProperty('--rot',(Math.random()*10-5).toFixed(1)+'deg');
  if(i>=0)setCur(L[i].s);else{lc.textContent='';words=[]}
- lc.classList.remove('pop');void lc.offsetWidth;lc.classList.add('pop');
+ lc.className='ln cur wslot an-'+a;
+ [lp2,lp,ln,ln2].forEach(e=>e.classList.remove('roll'));
+ void lc.offsetWidth; // restart the animation
+ if(a==='wheel')[lp2,lp,lc,ln,ln2].forEach(e=>e.classList.add('roll'));
  [lp,lc,ln].forEach(e=>e.style.opacity='');
 }
+$('lstyle').addEventListener('change',()=>{document.body.dataset.ls=$('lstyle').value==='wheel'?'wheel':'flat';if(L.length&&idx>=0)show(idx)});
 
 // demo
 const DEMO=`[00:01.00] this is the demo track

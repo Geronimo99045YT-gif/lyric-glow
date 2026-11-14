@@ -10,6 +10,7 @@ Animated, karaoke-style lyrics, a spinning vinyl and beat-reactive edge lighting
 - Flowing sound-wave visualiser driven by the live spectrum (toggleable)
 - Play / pause / next / previous from the panel buttons (no keyboard shortcuts, so nothing fires while you're gaming): through Windows' media controls (any player, no Premium), or through Spotify's API if you're connected (Premium, also works for cast speakers)
 - Pick which app the beat and wave listen to (Windows per-app audio), so games and Discord don't trigger the glow
+- Lyric entrance styles: classic pop, Insta pop (tilted words), 3D wheel, slide, flip, zoom, drop, or shuffle per song / per line
 - Better lyric matching, with an "estimated timing" fallback when only un-timed lyrics exist
 - Reads what's playing from **Spotify** or straight from **your PC** (Windows), no account needed
 - Lyrics from [LRCLIB](https://lrclib.net), cover art from Apple's public search, BPM from [ReccoBeats](https://reccobeats.com)
