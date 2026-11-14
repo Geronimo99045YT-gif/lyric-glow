@@ -1,11 +1,27 @@
 // Lyric Glow desktop app (Windows). Made by Chaz.
 // Runs the page from a tiny local server (Spotify login needs an http://127.0.0.1 address),
 // reads what Windows is playing via nowplaying.ps1, and auto-grants system-audio capture.
-const { app, BrowserWindow, session, desktopCapturer, shell, Menu } = require('electron');
+const { app, BrowserWindow, session, desktopCapturer, shell, Menu, screen } = require('electron');
 const http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 const { spawn, execFile } = require('child_process');
 
-let latest = '{"playing":false}', ps = null, server = null, win = null;
+let latest = '{"playing":false}', ps = null, server = null, win = null, overlayWin = null, serverPort = 8888;
+
+// Transparent, frameless, always-on-top window showing just the lyrics (for Discord share / game capture).
+// Drag it by its text; hover the corner for a close button.
+function openOverlay() {
+  if (overlayWin && !overlayWin.isDestroyed()) { overlayWin.focus(); return; }
+  const wa = screen.getPrimaryDisplay().workArea, w = 1000, h = 320;
+  overlayWin = new BrowserWindow({
+    width: w, height: h, x: wa.x + Math.round((wa.width - w) / 2), y: wa.y + wa.height - h - 40,
+    transparent: true, frame: false, hasShadow: false, alwaysOnTop: true, resizable: false,
+    backgroundColor: '#00000000', title: 'Lyric Glow overlay', icon: path.join(__dirname, 'icon.png'),
+    webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false }
+  });
+  overlayWin.setAlwaysOnTop(true, 'screen-saver'); // stays above borderless-windowed games
+  overlayWin.loadURL(`http://127.0.0.1:${serverPort}/lyric-glow.html?overlay=1`);
+  overlayWin.on('closed', () => { overlayWin = null; });
+}
 
 const psPath = () => app.isPackaged ? path.join(process.resourcesPath, 'nowplaying.ps1') : path.join(__dirname, 'nowplaying.ps1');
 
@@ -70,6 +86,10 @@ function listen(port) {
           r.writeHead(204);
         } else r.writeHead(403);
         r.end();
+      } else if (u === '/api/overlay' && q.method === 'POST') {
+        const okOrigin = !q.headers.origin || /^http:\/\/127\.0\.0\.1:\d+$/.test(q.headers.origin);
+        if (q.headers['x-lg'] === '1' && okOrigin) { openOverlay(); r.writeHead(204); } else r.writeHead(403);
+        r.end();
       } else if (u === '/api/audioapps') {
         execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', appAudioPath(), 'list'], { windowsHide: true, timeout: 20000 }, (err, out) => {
           r.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -94,7 +114,7 @@ function listen(port) {
 async function startServer() {
   // 8888 first so the Spotify Redirect URI people register stays the same
   for (let p = 8888; p < 8898; p++) {
-    try { server = await listen(p); return p; } catch (e) { /* port busy, try next */ }
+    try { server = await listen(p); serverPort = p; return p; } catch (e) { /* port busy, try next */ }
   }
   throw new Error('No free port');
 }
@@ -125,6 +145,18 @@ if (!app.requestSingleInstanceLock()) {
       return;
     }
 
+    if (process.env.LG_OVERLAY_TEST) { // self-test: open the overlay through the real HTTP endpoint and inspect the window
+      const r = await fetch(`http://127.0.0.1:${port}/api/overlay?action=open`, { method: 'POST', headers: { 'X-LG': '1' } });
+      const bad = await fetch(`http://127.0.0.1:${port}/api/overlay?action=open`, { method: 'POST' }); // no header: must be refused
+      await new Promise(r2 => setTimeout(r2, 3500));
+      const info = { endpoint: r.status, noHeader: bad.status, open: !!(overlayWin && !overlayWin.isDestroyed()) };
+      if (info.open) {
+        info.alwaysOnTop = overlayWin.isAlwaysOnTop(); info.bounds = overlayWin.getBounds();
+        info.page = await overlayWin.webContents.executeJavaScript(`JSON.stringify({overlay:document.body.classList.contains('overlay'),bodyBg:getComputedStyle(document.body).backgroundColor,panelHidden:getComputedStyle(document.getElementById('panel')).display==='none'})`);
+      }
+      console.log('OVERLAY_TEST ' + JSON.stringify(info));
+      app.quit(); return;
+    }
     if (process.env.LG_CAPTURE_TEST) { // self-test: run the real capture path and report what the analyser hears
       const tw = new BrowserWindow({ width: 900, height: 500, show: true, webPreferences: { contextIsolation: true, sandbox: true, backgroundThrottling: false } });
       await tw.loadURL(`http://127.0.0.1:${port}/lyric-glow.html`);
@@ -158,5 +190,6 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('window-all-closed', () => app.quit());
+  app.on('browser-window-created', (_e, w) => { w.on('closed', () => { if (w === win && overlayWin && !overlayWin.isDestroyed()) overlayWin.close(); }); });
   app.on('before-quit', () => { stopCap(); try { ps && ps.kill(); } catch (e) {} try { server && server.close(); } catch (e) {} });
 }

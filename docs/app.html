@@ -10,7 +10,7 @@
 html,body{height:100%;background:var(--bg);color:var(--txt);font-family:Inter,"Segoe UI",system-ui,sans-serif;overflow:hidden}
 canvas{position:fixed;inset:0;width:100%;height:100%}
 #stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 8vw;text-align:center;gap:2.2vh;pointer-events:none}
-.ln{font-weight:900;letter-spacing:-.02em;line-height:1.1;transition:all .6s cubic-bezier(.2,.8,.2,1);opacity:.0;transform:translateY(14px) scale(.96);filter:blur(6px)}
+.ln{font-family:var(--lf,inherit);text-transform:var(--lt,none);font-weight:var(--lw,900);letter-spacing:var(--lls,-.02em);line-height:1.1;transition:all .6s cubic-bezier(.2,.8,.2,1);opacity:.0;transform:translateY(14px) scale(.96);filter:blur(6px)}
 .prev,.next{font-size:clamp(20px,3vw,40px);opacity:.3;filter:blur(1.5px);transform:none}
 .cur{font-size:clamp(36px,6.5vw,104px);opacity:1;filter:none;transform:none}
 /* no-lyrics card: song name (big) / artist / faded "Lyrics unavailable" */
@@ -44,7 +44,7 @@ body[data-ls=wheel] .wslot{display:none}
 .dl{position:absolute;left:50%;top:50%;width:min(92%,1100px);backface-visibility:hidden;
  transform:translate(-50%,-50%) rotateX(calc(var(--k,0)*var(--STEP)*-1)) translateZ(var(--R));
  opacity:0;visibility:hidden;transition:opacity .9s ease}
-.di{font-weight:900;letter-spacing:-.02em;line-height:1.1;text-align:center;font-size:clamp(30px,4.8vw,76px);
+.di{font-family:var(--lf,inherit);text-transform:var(--lt,none);font-weight:var(--lw,900);letter-spacing:var(--lls,-.02em);line-height:1.1;text-align:center;font-size:clamp(30px,4.8vw,76px);
  transform:scale(.4);transition:transform 1s cubic-bezier(.3,1.2,.4,1)}
 .dl[data-d="0"]{opacity:1;visibility:visible}.dl[data-d="0"] .di{transform:scale(1)}
 .dl[data-d="1"],.dl[data-d="-1"]{opacity:.42;visibility:visible}.dl[data-d="1"] .di,.dl[data-d="-1"] .di{transform:scale(.62)}
@@ -80,12 +80,12 @@ select.inp option{background:#15141c;color:#f4f2ff}
 #hint{transition:opacity .8s}
 #by{position:fixed;left:50%;bottom:1.6vh;transform:translateX(-50%);font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.32;pointer-events:none;white-space:nowrap}
 #by b{font-weight:800;opacity:1;background:linear-gradient(90deg,var(--c1),var(--c3));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-#wiz{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-#wiz[hidden]{display:none}
-#wiz .card{width:min(560px,100%);max-height:100%;overflow:auto;padding:30px;border-radius:26px;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.04));border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.65)}
-#wiz .wh{font-size:22px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-#wiz .wh i{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c3));box-shadow:0 0 14px var(--c1)}
-#wiz .wh span{font-size:12px;font-weight:500;opacity:.5;letter-spacing:.02em}
+#wiz,#lpick{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#wiz[hidden],#lpick[hidden]{display:none}
+#wiz .card,#lpick .card{width:min(560px,100%);max-height:100%;overflow:auto;padding:30px;border-radius:26px;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.04));border:1px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.65)}
+#wiz .wh,#lpick .wh{font-size:22px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#wiz .wh i,#lpick .wh i{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c3));box-shadow:0 0 14px var(--c1)}
+#wiz .wh span,#lpick .wh span{font-size:12px;font-weight:500;opacity:.5;letter-spacing:.02em}
 #wiz ol{list-style:none;counter-reset:s;margin:22px 0 14px;display:flex;flex-direction:column;gap:16px;padding:0}
 #wiz li{counter-increment:s;position:relative;padding-left:44px;font-size:14px;line-height:1.5;opacity:.92}
 #wiz li::before{content:counter(s);position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:linear-gradient(135deg,var(--c1),var(--c2))}
@@ -95,7 +95,14 @@ select.inp option{background:#15141c;color:#f4f2ff}
 #wiz .copy .btn{width:auto;padding:0 16px}
 #wiz input{width:100%;margin-top:8px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.4);color:var(--txt);font:13px ui-monospace,Consolas,monospace}
 #wmsg{font-size:13px;min-height:18px;color:#ffb3b3}
-#wiz .wb{display:flex;gap:10px;margin-top:10px}
+#wiz .wb,#lpick .wb{display:flex;gap:10px;margin-top:10px}
+/* lyric picker rows */
+#lpres{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto}
+.lprow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer;text-align:left;color:var(--txt);font:inherit;transition:background .15s,transform .15s}
+.lprow:hover{background:rgba(255,255,255,.12);transform:translateX(3px)}
+.lprow b{font-size:14px;display:block}.lprow small{opacity:.6;font-size:12px}
+.lprow .tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:linear-gradient(135deg,var(--c1),var(--c2));white-space:nowrap}
+.lprow .tag.plain{background:rgba(255,255,255,.14)}
 #wiz .by{text-align:center;margin-top:20px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.4}
 #panel{position:fixed;top:18px;right:18px;width:300px;max-height:calc(100% - 36px);overflow:auto;padding:18px;border-radius:20px;
  background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
@@ -116,6 +123,26 @@ input[type=range]{width:100%;accent-color:var(--c1)}
 small{opacity:.45;font-size:11px;line-height:1.4}
 audio{width:100%;height:34px}
 #hint{position:fixed;top:18px;left:50%;transform:translateX(-50%);font-size:12px;opacity:.4;pointer-events:none}
+/* ---- themes: fonts/effects here, colours + layout flags in the THEMES table in the script ---- */
+body[data-theme=neon]{--lf:"Segoe UI Black","Arial Black","Helvetica Neue",sans-serif;--lt:uppercase;--lls:.03em;--lw:900}
+body[data-theme=neon] .cur,body[data-theme=neon] .dl[data-d="0"] .di{filter:drop-shadow(0 0 16px var(--c1)) drop-shadow(0 0 42px var(--c2))}
+body[data-theme=vinylshop]{--lf:Georgia,"Times New Roman",serif;--lw:700;--lls:-.01em}
+body[data-theme=vinylshop] .cur,body[data-theme=vinylshop] .di{font-style:italic}
+body[data-theme=vinylshop]::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,transparent 42%,rgba(45,16,0,.6) 100%)}
+body[data-theme=vinylshop]::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.24;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+body[data-theme=minimal]{--lf:"Segoe UI","Helvetica Neue",Arial,sans-serif;--lw:600;--lls:-.015em}
+/* ---- streaming overlay (?overlay=1): transparent, lyrics only, draggable when it's its own window ---- */
+html:has(body.overlay),body.overlay{background:transparent!important}
+body.overlay #panel,body.overlay #hint,body.overlay #by,body.overlay #wiz,body.overlay #lpick,body.overlay #dbg,body.overlay::before,body.overlay::after{display:none!important}
+body.overlay:not(.ovnp) #np{display:none}
+body.overlay #stage{filter:drop-shadow(0 3px 14px rgba(0,0,0,.9))}
+body.overlay{-webkit-app-region:drag}
+#ovx{display:none;position:fixed;top:8px;right:8px;z-index:60;width:30px;height:30px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;opacity:0;transition:opacity .2s;-webkit-app-region:no-drag}
+body.overlay #ovx{display:block}
+body.overlay:hover #ovx{opacity:1}
+/* ---- screensaver mode ---- */
+body.saver #panel,body.saver #hint,body.saver #by,body.saver #np .ctl{opacity:0!important;pointer-events:none!important}
+body.saver,body.saver *{cursor:none!important}
 </style>
 </head>
 <body>
@@ -137,6 +164,15 @@ audio{width:100%;height:34px}
  </div></div>
 <div id="dbg" style="position:fixed;right:20px;bottom:14px;font:11px ui-monospace,Consolas,monospace;opacity:.45;pointer-events:none"></div>
 <div id="by">Made by <b>Chaz</b></div>
+<button id="ovx" title="Close overlay">✕</button>
+<div id="lpick" hidden>
+ <div class="card">
+  <div class="wh"><i></i>Pick the right lyrics <span>from LRCLIB</span></div>
+  <div class="row" style="margin-top:16px"><input id="lpq" class="inp" style="margin:0" placeholder="Song title and artist" autocomplete="off"><button class="btn primary" id="lpgo" style="width:auto;padding:0 18px">Search</button></div>
+  <div id="lpres" style="margin-top:14px"></div>
+  <div class="wb" style="margin-top:14px"><button class="btn" id="lpclose">Close</button></div>
+ </div>
+</div>
 <div id="wiz" hidden>
  <div class="card">
   <div class="wh"><i></i>Lyric Glow <span>one-time setup · about 2 minutes</span></div>
@@ -200,6 +236,16 @@ audio{width:100%;height:34px}
       <button class="btn" id="lrcfile">Load .lrc</button>
     </div>
     <input type="file" id="lrcin" accept=".lrc,.txt" hidden>
+    <button class="btn" id="lpickbtn" style="margin-top:8px">Wrong or missing lyrics? Pick another</button>
+  </div>
+  <div>
+    <label>Theme</label>
+    <select class="inp" id="theme" style="margin-bottom:0">
+      <option value="classic">Classic</option>
+      <option value="neon">Neon (glowing caps, hot colours)</option>
+      <option value="vinylshop">Vinyl shop (warm, grainy, serif)</option>
+      <option value="minimal">Minimal (lyrics only, no vinyl)</option>
+    </select>
   </div>
   <div>
     <label>Lyric style (how lines come in)</label>
@@ -214,6 +260,8 @@ audio{width:100%;height:34px}
       <option value="song">Shuffle per song (new style each song)</option>
       <option value="random">Shuffle per line (different every line)</option>
     </select>
+    <div id="shufchips" class="row" style="gap:6px 14px;flex-wrap:wrap;margin-top:10px"></div>
+    <small style="display:block;margin-top:4px">Shuffle only picks from the styles ticked here.</small>
   </div>
   <div>
     <label>Palette</label>
@@ -224,6 +272,12 @@ audio{width:100%;height:34px}
   <div><label>Reactivity</label><input type="range" id="re" min="0" max="2" step="0.05" value="1"></div>
   <div><label>Lyric offset (s)</label><input type="range" id="off" min="-3" max="3" step="0.1" value="0"></div>
   <div><label>Beat nudge (BPM mode)</label><input type="range" id="bn" min="-0.5" max="0.5" step="0.02" value="0"></div>
+  <div>
+    <label>Streaming overlay</label>
+    <div class="row"><button class="btn" id="ovopen">Open overlay window</button><button class="btn" id="ovcopy">Copy OBS link</button></div>
+    <small style="display:block;margin-top:6px">Transparent lyrics for OBS or Discord. In OBS: Sources → + → Browser, paste the link, set the size you want.</small>
+  </div>
+  <button class="btn" id="saver">🌙 Screensaver mode</button>
   <button class="btn" id="demo">Run demo (no audio needed)</button>
   <a class="btn donate" href="https://ko-fi.com/raptormakesstuff" target="_blank" rel="noopener" title="Support Lyric Glow">☕ Donate</a>
   <small style="text-align:center;opacity:.6;letter-spacing:.12em;text-transform:uppercase">Made by Chaz</small>
@@ -247,12 +301,14 @@ const PALS={
 };
 const pal=$('pal');
 function setPal(n){
+ lockPal=false; // picking a palette yourself always wins over a theme's colours
  const p=PALS[n];['--c1','--c2','--c3'].forEach((v,i)=>document.documentElement.style.setProperty(v,p[i]));
  [...pal.children].forEach(b=>b.classList.toggle('on',b.dataset.n===n));
  colors=p.map(hex);try{localStorage.lg_pal=n}catch(e){}
 }
 function hex(h){return[1,3,5].map(i=>parseInt(h.substr(i,2),16))}
 let colors=PALS.Sunset.map(hex);
+let lockPal=false,coverColors=null; // lockPal: a theme is forcing its own colours instead of the album cover's
 for(const n in PALS){const b=document.createElement('button');b.dataset.n=n;b.title=n;
  b.style.background=`linear-gradient(135deg,${PALS[n].join(',')})`;b.onclick=()=>setPal(n);pal.appendChild(b)}
 let sp='Sunset';try{sp=localStorage.lg_pal||sp}catch(e){}setPal(PALS[sp]?sp:'Sunset');
@@ -288,7 +344,7 @@ $('lrcin').onchange=async e=>{const f=e.target.files[0];if(f){$('lrc').value=awa
 $('off').oninput=e=>offset=+e.target.value;
 
 // saved settings
-const SET=['gi','re','off','bn','lstyle'];
+const SET=['gi','re','off','bn','lstyle','theme'];
 try{const s=JSON.parse(localStorage.lg_set||'{}');SET.forEach(k=>{if(s[k]!=null)$(k).value=s[k]});offset=+$('off').value}catch(e){}
 SET.forEach(k=>$(k).addEventListener('input',()=>{try{localStorage.lg_set=JSON.stringify(Object.fromEntries(SET.map(k=>[k,$(k).value])))}catch(e){}}));
 
@@ -319,10 +375,10 @@ function lyricStyle(i){ // which entrance this line uses
  const v=$('lstyle').value;
  if(v==='song'){ // pick a style when a new song starts (never the same twice running) and keep it for the whole song
   const k=SP.id||au.currentSrc||'demo';
-  if(k!==songKey){songKey=k;let n;do{n=SONG[Math.random()*SONG.length|0]}while(n===songAnim);songAnim=n}
+  if(k!==songKey){songKey=k;const pool=shufPool(true);let n;do{n=pool[Math.random()*pool.length|0]}while(n===songAnim&&pool.length>1);songAnim=n}
   return songAnim==='slide'?(i%2?'slideR':'slideL'):songAnim;
  }
- if(v==='random')return RAND[Math.random()*RAND.length|0];
+ if(v==='random'){const pool=shufPool(false),n=pool[Math.random()*pool.length|0];return n==='slide'?(Math.random()<.5?'slideL':'slideR'):n} // (no wheel: it can't change per line)
  if(v==='slide')return i%2?'slideR':'slideL'; // alternate sides
  return v;
 }
@@ -461,6 +517,7 @@ function palFromArt(url){
    if(mx-mn<40||mx<70)continue;const k=(r>>5)+','+(g>>5)+','+(b>>5);(bins[k]=bins[k]||{n:0,r:0,g:0,b:0});const o=bins[k];o.n++;o.r+=r;o.g+=g;o.b+=b}
   const top=Object.values(bins).sort((a,b)=>b.n-a.n).slice(0,3).map(o=>[o.r/o.n|0,o.g/o.n|0,o.b/o.n|0]);
   if(!top.length)return;while(top.length<3)top.push(top[0]);
+  coverColors=top;if(lockPal)return; // remember the cover's colours, but a theme's own palette wins
   colors=top;['--c1','--c2','--c3'].forEach((v,i)=>document.documentElement.style.setProperty(v,`rgb(${top[i]})`));
   [...pal.children].forEach(b=>b.classList.remove('on'));
  }catch(e){}};
@@ -617,6 +674,77 @@ function syncClock(pos,playing,lag){
  SP.at=now;SP.playing=playing;
 }
 let lastCt=-1,lastId=null; // lyric time only ever moves forward unless it's a genuine seek
+
+// ---- themes: look = fonts/effects (CSS, above) + these numbers. vinyl: draw the record; edge: edge-glow strength;
+// waveW: sound-wave size; bg: canvas colour; palette: colours forced by the theme (null = use the album cover's) ----
+const THEMES={
+ classic:{vinyl:true,edge:1,waveW:1,bg:'#000',palette:null},
+ neon:{vinyl:true,edge:1.55,waveW:1.5,bg:'#05020d',palette:['#ff2bd6','#27f0ff','#8a5bff']},
+ vinylshop:{vinyl:true,edge:.5,waveW:.65,bg:'#140a05',palette:['#ffb347','#e8743b','#c1440e']},
+ minimal:{vinyl:false,edge:.3,waveW:.55,bg:'#000',palette:null,waveY:.13} // wave rides the top edge so it never strikes through the lyric or covers the controls
+};
+let LOOK=THEMES.classic;
+function applyTheme(){
+ const n=$('theme').value,T=THEMES[n]||THEMES.classic,root=document.documentElement.style;
+ LOOK=T;document.body.dataset.theme=n;
+ if(T.palette){
+  lockPal=true;colors=T.palette.map(hex);T.palette.forEach((c,i)=>root.setProperty(['--c1','--c2','--c3'][i],c));
+  [...pal.children].forEach(b=>b.classList.remove('on'));
+ }else if(lockPal){ // leaving a colour-forcing theme: go back to the cover's colours (or the saved palette)
+  lockPal=false;
+  if(coverColors){colors=coverColors;coverColors.forEach((c,i)=>root.setProperty(['--c1','--c2','--c3'][i],`rgb(${c})`))}
+  else setPal(PALS[sp]?sp:'Sunset');
+ }
+ discKey=''; // re-bake the record so its label picks up the new colours
+}
+$('theme').addEventListener('change',applyTheme);
+
+// ---- which styles Shuffle may pick (saved) ----
+const STY=[['pop','Pop'],['insta','Insta pop'],['wheel','Wheel'],['slide','Slide'],['flip','Flip'],['zoom','Zoom'],['drop','Drop']];
+let SHUF=STY.map(x=>x[0]);
+try{const s=JSON.parse(localStorage.lg_shuf||'null');if(Array.isArray(s)&&s.length)SHUF=s.filter(x=>STY.some(y=>y[0]===x))}catch(e){}
+STY.forEach(([v,label])=>{
+ const l=document.createElement('label');l.className='chk';
+ l.innerHTML='<input type="checkbox" value="'+v+'"'+(SHUF.includes(v)?' checked':'')+'>'+label;
+ l.firstChild.addEventListener('change',()=>{SHUF=[...$('shufchips').querySelectorAll('input:checked')].map(i=>i.value);try{localStorage.lg_shuf=JSON.stringify(SHUF)}catch(e){}});
+ $('shufchips').appendChild(l);
+});
+const shufPool=wheelOk=>{const all=STY.map(x=>x[0]).filter(x=>wheelOk||x!=='wheel');const p=SHUF.filter(x=>all.includes(x));return p.length?p:all}; // nothing ticked = allow everything
+
+// ---- screensaver mode: a button turns it on; any mouse movement, click or key turns it off ----
+let saverOn=false,saverFS=false,saverArm=0,saverX=null,saverY=null;
+function saverOff(){
+ if(!saverOn)return;saverOn=false;document.body.classList.remove('saver');
+ if(saverFS&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+ saverFS=false;$('panel').classList.remove('hide');
+}
+$('saver').onclick=async()=>{
+ saverOn=true;document.body.classList.add('saver');saverArm=performance.now()+700;saverX=saverY=null; // ignore the click that started it
+ if(!document.fullscreenElement){try{await document.documentElement.requestFullscreen();saverFS=true}catch(e){}}
+};
+['pointermove','pointerdown','keydown','wheel'].forEach(ev=>addEventListener(ev,e=>{
+ if(!saverOn||performance.now()<saverArm)return;
+ if(ev==='pointermove'){
+  if(saverX===null){saverX=e.clientX;saverY=e.clientY;return}
+  if(Math.hypot(e.clientX-saverX,e.clientY-saverY)<12)return; // ignore tiny jiggles
+ }
+ saverOff();
+},true));
+
+// ---- streaming overlay: ?overlay=1 gives transparent, lyrics-only output (&wave=1 adds the wave, &np=1 the song title) ----
+const QS=new URLSearchParams(location.search),OV=QS.get('overlay')==='1',OVWAVE=QS.get('wave')==='1';
+if(OV){document.body.classList.add('overlay');if(QS.get('np')==='1')document.body.classList.add('ovnp');document.title='Lyric Glow overlay'}
+const ovBase=()=>location.href.split(/[?#]/)[0];
+$('ovx').onclick=()=>window.close();
+$('ovopen').onclick=async()=>{ // the app opens a transparent, always-on-top window; anywhere else we fall back to a small popup
+ const ok=await fetch('/api/overlay?action=open',{method:'POST',headers:{'X-LG':'1'}}).then(r=>r.status===204).catch(()=>false);
+ if(!ok)window.open(ovBase()+'?overlay=1','lgoverlay','popup,width=1000,height=320');
+};
+$('ovcopy').onclick=async()=>{
+ const u=ovBase()+'?overlay=1',b=$('ovcopy');
+ try{await navigator.clipboard.writeText(u);b.textContent='Copied ✓'}catch(e){b.textContent='Copy failed';prompt('Copy this link:',u)}
+ setTimeout(()=>b.textContent='Copy OBS link',2000);
+};
 let spec=null;const WN=96,wv=new Float32Array(WN); // spectrum for the sound wave (null when there's no live audio)
 let bass=0,mid=0,hi=0,pulse=0,t=0;
 const blobs=Array.from({length:7},(_,i)=>({a:Math.random()*6.28,s:.08+Math.random()*.15,r:.35+Math.random()*.3,c:i%3}));
@@ -653,13 +781,15 @@ function frame(now){
  flash*=.86;
  if(live&&++dbgN%8===0)$('dbg').textContent=`audio in: ${(b*100)|0}%  ${b>.01?'signal ok':'NO SIGNAL, re-share with "Share system audio" ticked'}`;
  ctx.globalCompositeOperation='source-over';
- ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+ if(OV)ctx.clearRect(0,0,W,H); // overlay: stay transparent so OBS / the desktop shows through
+ else{ctx.fillStyle=LOOK.bg;ctx.fillRect(0,0,W,H)}
  ctx.globalCompositeOperation='lighter';
  // screen edges glow in the cover's dominant colour, pumping on the beat
  // Glow intensity = resting brightness/size of the edge light. Reactivity = how hard the beat adds on top.
- const e=.45*G+pulse*.6+flash*1.2*R, th=Math.min(W,H)*(.1+.06*G+pulse*.05+flash*.14*R), dc=colors[0];
- if(flash>.03){ctx.fillStyle=`rgba(${dc},${flash*.16*R})`;ctx.fillRect(0,0,W,H)}
- [[0,0,0,th],[0,H,0,-th],[0,0,th,0],[W,0,-th,0]].forEach(([x0,y0,dx,dy])=>{
+ const EM=OV?0:LOOK.edge*(saverOn?1.25:1); // theme edge strength (0 in the overlay)
+ const e=(.45*G+pulse*.6+flash*1.2*R)*EM, th=Math.min(W,H)*(.1+.06*G+pulse*.05+flash*.14*R)*EM, dc=colors[0];
+ if(flash>.03&&EM>0){ctx.fillStyle=`rgba(${dc},${flash*.16*R*EM})`;ctx.fillRect(0,0,W,H)}
+ if(EM>0)[[0,0,0,th],[0,H,0,-th],[0,0,th,0],[W,0,-th,0]].forEach(([x0,y0,dx,dy])=>{
   const gr=ctx.createLinearGradient(x0,y0,x0+dx,y0+dy);
   gr.addColorStop(0,`rgba(${dc},${Math.min(.95,e*.7)})`);gr.addColorStop(.35,`rgba(${dc},${Math.min(.5,e*.25)})`);gr.addColorStop(1,`rgba(${dc},0)`);
   ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
@@ -667,15 +797,15 @@ function frame(now){
  ctx.globalCompositeOperation='source-over';
 
  // sound wave: three flowing layered waves driven by the live spectrum (or the beat pulse when there's no audio to read)
- if(waveOn){
-  const x0=W>H*1.1?W*.02+H*.55:W*.06,x1=W*.97,cyW=H*.5;
+ if(waveOn&&(!OV||OVWAVE)){
+  const x0=(W>H*1.1&&LOOK.vinyl&&!OV)?W*.02+H*.55:W*.06,x1=W*.97,cyW=H*(LOOK.waveY||.5);
   for(let i=0;i<WN;i++){
    let tgt;
    if(spec){const n=spec.length,k=Math.min(n-2,1+Math.floor(Math.pow(i/WN,1.8)*n*(spec===appSpec?.95:.55)));tgt=(spec[k]+spec[k+1])/510}
    else tgt=(.05+b*.9)*(.55+.45*Math.sin(i*.35+t*2.1));
    wv[i]+=(tgt-wv[i])*(tgt>wv[i]?.5:.12);
   }
-  const amp=H*.17*(.35+.65*R);
+  const amp=H*.17*(.35+.65*R)*LOOK.waveW*(saverOn?1.25:1);
   ctx.globalCompositeOperation='lighter';ctx.lineJoin='round';
   for(let k=0;k<3;k++){
    ctx.beginPath();
@@ -684,7 +814,7 @@ function frame(now){
     const y=cyW+Math.sin(u*(9+k*3)+t*(1.4+k*.7)+k*2)*v*amp*(1-k*.22)*e;
     i?ctx.lineTo(x,y):ctx.moveTo(x,y);
    }
-   ctx.strokeStyle=`rgba(${colors[k]},${.55-k*.12})`;ctx.lineWidth=Math.max(1.5,H*(.006-k*.0014));ctx.stroke();
+   ctx.strokeStyle=`rgba(${colors[k]},${.55-k*.12})`;ctx.lineWidth=Math.max(1.5,H*(.006-k*.0014)*LOOK.waveW);ctx.stroke();
   }
   ctx.globalCompositeOperation='source-over';
  }
@@ -695,10 +825,13 @@ function frame(now){
   const playing=SP.on&&SP.id&&!demo?SP.playing:(demo||live||!au.paused);
   spd+=((playing?1.3:0)-spd)*Math.min(1,dt*3);
   ang+=dt*spd+flash*.02*R;
-  const wide=W>H*1.1,cx=wide?W*.02:W/2,cy=wide?H*.5:H*.08;
-  const r=(wide?H*.5:W*.46)*(1+flash*.04*R); // wide layout: record is exactly as tall as the window
+  const vinylOn=LOOK.vinyl&&!OV; // Minimal theme and the overlay have no record
+  const sv=saverOn?1+.1*Math.sin(t*.13):1; // screensaver: the record slowly breathes and drifts
+  const wide=W>H*1.1,cx=(wide?W*.02:W/2)+(saverOn?Math.sin(t*.07)*W*.012:0),cy=wide?H*.5:H*.08;
+  const r=(wide?H*.5:W*.46)*(1+flash*.04*R)*sv; // wide layout: record is exactly as tall as the window
   const key=artOn+'|'+artN+'|'+colors[0]+'|'+colors[2];
   if(key!==discKey){discKey=key;bakeDisc()}
+  if(vinylOn){
   ctx.save();ctx.translate(cx,cy);
   // cheap halo (gradient instead of shadowBlur)
   ctx.globalCompositeOperation='lighter';
@@ -708,8 +841,9 @@ function frame(now){
   ctx.globalCompositeOperation='source-over';
   ctx.rotate(ang);ctx.drawImage(dsk,-r,-r,r*2,r*2);
   ctx.restore();
+  }
   // tonearm: swings onto the record while playing and creeps inward as the song progresses
-  if(wide){
+  if(wide&&vinylOn){
    armT+=((playing?1:0)-armT)*Math.min(1,dt*2.2);
    const Px=cx+r*1.08,Py=cy-r*.62,Lk=r*.98,rho=r*(.93-.43*Math.min(1,prog));
    let th=0,best=9;
@@ -751,7 +885,15 @@ function frame(now){
   }
   // lyrics + now-playing live in the space to the right of the record and its tonearm
   const npEl=$('np');
-  if(wide){
+  if(!vinylOn){ // no record: lyrics use the whole width
+   const left=Math.round(innerWidth*.06),npw=Math.min(640,innerWidth-left*2);
+   if(npEl.dataset.v!=='c'+left){
+    npEl.dataset.v='c'+left;
+    npEl.style.left=Math.round((innerWidth-npw)/2)+'px';npEl.style.width=npw+'px';npEl.style.bottom='6vh'; // centred under the lyrics
+    stage.style.paddingLeft=left+'px';stage.style.paddingRight=left+'px';
+   }
+   stage.style.paddingTop='0';
+  }else if(wide){
    const left=Math.round((W*.02+H*.6)*innerWidth/W+24); // clears the disc and the tonearm pivot
    if(npEl.dataset.v!==String(left)){
     npEl.dataset.v=String(left);
@@ -832,10 +974,24 @@ function plainToLrc(plain,dur){
  const total=dur>0?dur:lines.length*3.8+12,start=Math.min(15,total*.08),span=Math.max(lines.length*1.5,total*.92-start),step=span/lines.length;
  return lines.map((s,i)=>{const t=start+i*step;return '['+String(t/60|0).padStart(2,'0')+':'+(t%60).toFixed(2).padStart(5,'0')+'] '+s}).join('\n');
 }
+// extra matching: strip accents/punctuation ("Beyoncé" -> "Beyonce", "&" -> "and") so the same song matches across databases
+const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/&/g,' and ').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+const pickKey=(t,a)=>norm(simplify(t))+'|'+norm((a||'').split(/[,&]/)[0]);
+let PICKS={};try{PICKS=JSON.parse(localStorage.lg_picks||'{}')}catch(e){} // lyrics you chose by hand, remembered per song
+const savePicks=()=>{try{localStorage.lg_picks=JSON.stringify(PICKS)}catch(e){}};
+let curTrack={title:'',artist:'',dur:0};
+async function ovhPlain(artist,title){ // lyrics.ovh: plain text only, so it only ever feeds the "estimated timing" fallback
+ if(!artist||!title)return '';
+ const j=await getJ('https://api.lyrics.ovh/v1/'+encodeURIComponent(artist)+'/'+encodeURIComponent(title));
+ return j&&j.lyrics?j.lyrics.replace(/^Paroles de la chanson[^\n]*\n/i,'').trim():'';
+}
 async function lrcSearch(title,artist,album,dur){
- lrcEst=false;
+ lrcEst=false;curTrack={title,artist,dur:dur||0};
  const Q='https://lrclib.net/api/',P=o=>new URLSearchParams(o),a1=(artist||'').split(/[,&]/)[0].trim();
- const tries=[[title,artist],[simplify(title),a1],[simplify(title),'']]
+ const pid=PICKS[pickKey(title,artist)]; // a version you picked by hand for this song always wins
+ if(pid){const j=await getJ(Q+'get/'+pid);if(j?.syncedLyrics)return j.syncedLyrics;if(j?.plainLyrics){lrcEst=true;return plainToLrc(j.plainLyrics,dur||j.duration)}}
+ const st=simplify(title);
+ const tries=[[title,artist],[st,a1],[norm(st),norm(a1)],[st,''],[norm(st),'']]
   .filter((x,i,a)=>x[0]&&a.findIndex(y=>y[0]===x[0]&&y[1]===x[1])===i);
  let plain=null;
  for(const [t,a] of tries){
@@ -851,9 +1007,40 @@ async function lrcSearch(title,artist,album,dur){
   if(ok.length){if(dur>0)ok.sort((x,y)=>Math.abs(x.duration-dur)-Math.abs(y.duration-dur));return ok[0].syncedLyrics}
   if(!plain){const pl=list.find(x=>x.plainLyrics);if(pl)plain=pl.plainLyrics}
  }
+ if(!plain)plain=await ovhPlain(a1,st); // last resort: lyrics.ovh (un-timed, so the timing is estimated)
  if(plain){lrcEst=true;return plainToLrc(plain,dur)}
  return '';
 }
+
+// ---- "Wrong or missing lyrics?" picker: search LRCLIB yourself and choose the right version (remembered for that song) ----
+const lpEl=$('lpick'),fmtDur=s=>(s/60|0)+':'+String(Math.round(s%60)).padStart(2,'0');
+async function lpSearch(){
+ const q=$('lpq').value.trim();if(!q)return;
+ const box=$('lpres');box.textContent='Searching…';
+ const list=await getJ('https://lrclib.net/api/search?'+new URLSearchParams({q}));
+ box.textContent='';
+ if(!list?.length){box.textContent='No matches. Try fewer words, like just the song title.';return}
+ list.slice(0,25).forEach(it=>{
+  const synced=!!it.syncedLyrics,b=document.createElement('button');b.className='lprow';
+  b.innerHTML='<span><b></b><small></small></span><span class="tag'+(synced?'':' plain')+'">'+(synced?'synced':'plain, estimated')+'</span>';
+  b.querySelector('b').textContent=it.trackName||it.name||'(untitled)';
+  b.querySelector('small').textContent=(it.artistName||'')+(it.albumName?' · '+it.albumName:'')+(it.duration?' · '+fmtDur(it.duration):'');
+  b.onclick=()=>lpApply(it);box.appendChild(b);
+ });
+}
+function lpApply(it){
+ let txt=it.syncedLyrics,est=false;
+ if(!txt&&it.plainLyrics){txt=plainToLrc(it.plainLyrics,it.duration||curTrack.dur);est=true}
+ if(!txt)return;
+ $('lrc').value=txt;applyLRC();lrcEst=est;if(est)estNote();
+ if(curTrack.title){PICKS[pickKey(curTrack.title,curTrack.artist)]=it.id;savePicks()}
+ lpEl.hidden=true;
+}
+$('lpickbtn').onclick=()=>{$('lpq').value=((curTrack.title||'')+' '+(curTrack.artist||'')).trim();lpEl.hidden=false;$('lpres').textContent='';if($('lpq').value)lpSearch();$('lpq').focus()};
+$('lpgo').onclick=lpSearch;
+$('lpq').addEventListener('keydown',e=>{if(e.key==='Enter')lpSearch()});
+$('lpclose').onclick=()=>lpEl.hidden=true;
+lpEl.addEventListener('mousedown',e=>{if(e.target===lpEl)lpEl.hidden=true}); // click the dim background to close
 async function artFor(title,artist){ // album cover from Apple's public search (no key)
  const j=await getJ('https://itunes.apple.com/search?'+new URLSearchParams({term:artist+' '+title,entity:'song',limit:5}));
  const a0=artist.toLowerCase().split(/[,&]/)[0].trim();
@@ -940,8 +1127,9 @@ if(HOSTED){
  $('wskip').textContent='Skip, use Search a song';
  $('wnote').textContent='No Spotify account, or can\'t be bothered? Skip this and use "Search a song" in the panel. To auto-detect what your PC is playing, get the Windows app from the home page.';
 }
-if(location.protocol.startsWith('http')&&!localStorage.lg_ref&&!localStorage.lg_skip&&!location.search.includes('code='))openWiz();
-if(!localStorage.lg_ref)$('demo').click();
+if(!OV&&location.protocol.startsWith('http')&&!localStorage.lg_ref&&!localStorage.lg_skip&&!location.search.includes('code='))openWiz();
+if(!localStorage.lg_ref&&!OV)$('demo').click();
+applyTheme(); // after the saved settings (incl. the theme choice) have been restored
 </script>
 </body>
 </html>
