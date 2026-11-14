@@ -327,9 +327,12 @@ function show(i){
  ln.classList.remove('artist');$('lu').textContent='';
  lc.style.setProperty('--rot',(Math.random()*10-5).toFixed(1)+'deg');
  if(i>=0)setCur(L[i].s);else{lc.textContent='';words=[]}
- lc.className='ln cur wslot an-'+a;
+ // Restart the animation every line. Re-assigning an identical class string does NOT restart a CSS animation,
+ // so strip the animation classes first, force a reflow, then apply them again.
+ lc.className='ln cur wslot';
  [lp2,lp,ln,ln2].forEach(e=>e.classList.remove('roll'));
- void lc.offsetWidth; // restart the animation
+ void lc.offsetWidth;
+ lc.className='ln cur wslot an-'+a;
  if(a==='wheel')[lp2,lp,lc,ln,ln2].forEach(e=>e.classList.add('roll'));
  [lp,lc,ln].forEach(e=>e.style.opacity='');
 }
