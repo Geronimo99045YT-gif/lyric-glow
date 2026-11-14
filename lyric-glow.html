@@ -33,19 +33,23 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 @keyframes zoomIn{from{opacity:0;transform:scale(2.4);filter:blur(14px)}to{opacity:1;transform:none;filter:none}}
 .cur.an-drop{animation:dropIn .75s cubic-bezier(.3,1.4,.5,1)}
 @keyframes dropIn{from{opacity:0;transform:translateY(-14vh) rotate(var(--rot,-4deg))}to{opacity:1;transform:none}}
-/* wheel: five lines on a drum, rolling up as the song moves on */
-body[data-ls=wheel] #stage{perspective:1100px;gap:.8vh}
-body[data-ls=wheel] .ln2{display:block}
-body[data-ls=wheel] .wslot{transform:rotateX(var(--rx,0deg)) scale(var(--s,1));opacity:var(--o,1);filter:none;transition:none;font-size:clamp(22px,3.6vw,52px)}
-body[data-ls=wheel] #lc{font-size:clamp(36px,6.5vw,104px)}
-#lp2{--rx:64deg;--s:.6;--o:.14}
-#lp{--rx:36deg;--s:.82;--o:.4}
-#lc{--rx:0deg;--s:1;--o:1}
-#ln{--rx:-36deg;--s:.82;--o:.4}
-#ln2{--rx:-64deg;--s:.6;--o:.14}
-body[data-ls=wheel] #ln.artist{--rx:0deg;--s:1;--o:.78}
-body[data-ls=wheel] .wslot.roll{animation:wroll .65s cubic-bezier(.2,.9,.25,1) both}
-@keyframes wroll{from{opacity:calc(var(--o,1)*.4);transform:translateY(8vh) rotateX(calc(var(--rx,0deg) + 34deg)) scale(calc(var(--s,1)*.82))}to{opacity:var(--o,1);transform:rotateX(var(--rx,0deg)) scale(var(--s,1))}}
+/* wheel: a REAL 3D drum. Every lyric line sits at its own angle around a cylinder and the whole cylinder rotates
+   (with a springy ease) so the next line swings round to the front. */
+#drumwrap{display:none;position:absolute;inset:0;padding:inherit;perspective:1400px;pointer-events:none}
+body[data-ls=wheel] #drumwrap{display:flex}
+body[data-ls=wheel] .wslot{display:none}
+#drum{--R:44vh;--STEP:30deg;flex:1;position:relative;height:100%;transform-style:preserve-3d;
+ transform:translateZ(calc(var(--R)*-1)) rotateX(calc(var(--i,0)*var(--STEP)));
+ transition:transform 1s cubic-bezier(.3,1.2,.4,1)}
+.dl{position:absolute;left:50%;top:50%;width:min(92%,1100px);backface-visibility:hidden;
+ transform:translate(-50%,-50%) rotateX(calc(var(--k,0)*var(--STEP)*-1)) translateZ(var(--R));
+ opacity:0;visibility:hidden;transition:opacity .9s ease}
+.di{font-weight:900;letter-spacing:-.02em;line-height:1.1;text-align:center;font-size:clamp(30px,4.8vw,76px);
+ transform:scale(.4);transition:transform 1s cubic-bezier(.3,1.2,.4,1)}
+.dl[data-d="0"]{opacity:1;visibility:visible}.dl[data-d="0"] .di{transform:scale(1)}
+.dl[data-d="1"],.dl[data-d="-1"]{opacity:.42;visibility:visible}.dl[data-d="1"] .di,.dl[data-d="-1"] .di{transform:scale(.62)}
+.dl[data-d="2"],.dl[data-d="-2"]{opacity:.18;visibility:visible}.dl[data-d="2"] .di,.dl[data-d="-2"] .di{transform:scale(.5)}
+.dl[data-d="3"],.dl[data-d="-3"]{opacity:.06;visibility:visible}
 @keyframes pop{from{opacity:0;transform:translateY(24px) scale(.94);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
 #np{position:fixed;left:42vw;bottom:7vh;width:40vw;max-width:640px;pointer-events:none;text-align:center}
 .nokar .w{background:none;-webkit-text-fill-color:#fff}
@@ -117,6 +121,7 @@ audio{width:100%;height:34px}
 <body>
 <canvas id="cv"></canvas>
 <div id="stage">
+  <div id="drumwrap"><div id="drum"></div></div>
   <div class="ln ln2 wslot" id="lp2"></div>
   <div class="ln prev wslot" id="lp"></div>
   <div class="ln cur wslot" id="lc"></div>
@@ -296,13 +301,14 @@ applyTG();
 
 const lp=$('lp'),lc=$('lc'),ln=$('ln');
 let words=[];
-function setCur(txt){ // one span per word so the karaoke fill can sweep through them
- lc.textContent='';words=[];let pos=0;
+function setCur(txt,target){ // one span per word so the karaoke fill can sweep through them
+ target=target||lc;
+ target.textContent='';words=[];let pos=0;
  const ws=txt.split(/\s+/).filter(Boolean);
  ws.forEach((w,i)=>{
-  const s=document.createElement('span');s.className='w';s.textContent=w;lc.appendChild(s);
+  const s=document.createElement('span');s.className='w';s.textContent=w;target.appendChild(s);
   s.style.setProperty('--i',i);s.style.setProperty('--wr',(Math.random()*22-11).toFixed(1)+'deg'); // used by the Insta pop style
-  if(i<ws.length-1)lc.appendChild(document.createTextNode(' '));
+  if(i<ws.length-1)target.appendChild(document.createTextNode(' '));
   words.push({s,st:pos,len:w.length+1,f:-1});pos+=w.length+1;
  });
  words.total=pos||1;
@@ -320,23 +326,48 @@ function lyricStyle(i){ // which entrance this line uses
  if(v==='slide')return i%2?'slideR':'slideL'; // alternate sides
  return v;
 }
+// ---- the wheel: one element per lyric line, all placed round a 3D cylinder. Changing --i rotates the whole drum. ----
+const drumEl=$('drum');let drumFor=null,dlEls=[],drumI=null,curK=-1;
+function buildDrum(){
+ drumEl.textContent='';dlEls=[];curK=-1;
+ L.forEach((row,k)=>{
+  const d=document.createElement('div');d.className='dl';d.style.setProperty('--k',k);
+  const inner=document.createElement('div');inner.className='di';inner.textContent=row.s;
+  d.appendChild(inner);drumEl.appendChild(d);dlEls.push(d);
+ });
+ drumFor=L;drumI=null;
+}
+function spinTo(i){
+ if(drumFor!==L)buildDrum();
+ // first time for this song, or a big jump (seek / demo loop): snap there. Otherwise spin.
+ const snap=drumI===null||Math.abs(i-drumI)>4;
+ if(snap)drumEl.style.transition='none';
+ drumEl.style.setProperty('--i',i);
+ dlEls.forEach((el,k)=>{const d=k-i;el.dataset.d=Math.abs(d)>3?'x':d;if(snap&&el.firstChild)el.firstChild.style.transition='none'});
+ if(snap){void drumEl.offsetWidth;drumEl.style.transition='';dlEls.forEach(el=>{if(el.firstChild)el.firstChild.style.transition=''})}
+ drumI=i;
+ // only the front line carries the karaoke word spans; put the previous one back to plain text
+ if(curK>=0&&dlEls[curK]&&curK!==i)dlEls[curK].firstChild.textContent=L[curK].s;
+ if(i>=0&&dlEls[i]){setCur(L[i].s,dlEls[i].firstChild);curK=i}else{words=[];curK=-1}
+}
 function show(i){
- const a=lyricStyle(i);
- document.body.dataset.ls=a==='wheel'?'wheel':'flat';
- lp2.textContent=L[i-2]?.s||'';lp.textContent=L[i-1]?.s||'';ln.textContent=L[i+1]?.s||'';ln2.textContent=L[i+2]?.s||'';
+ let a=lyricStyle(i);
+ const wheel=a==='wheel'&&L.length>0; // (no lyrics = nothing to put on a wheel, so use the normal card)
+ if(a==='wheel'&&!wheel)a='pop';
+ document.body.dataset.ls=wheel?'wheel':'flat';
  ln.classList.remove('artist');$('lu').textContent='';
+ if(wheel){spinTo(i);return}
+ lp2.textContent=L[i-2]?.s||'';lp.textContent=L[i-1]?.s||'';ln.textContent=L[i+1]?.s||'';ln2.textContent=L[i+2]?.s||'';
  lc.style.setProperty('--rot',(Math.random()*10-5).toFixed(1)+'deg');
  if(i>=0)setCur(L[i].s);else{lc.textContent='';words=[]}
  // Restart the animation every line. Re-assigning an identical class string does NOT restart a CSS animation,
- // so strip the animation classes first, force a reflow, then apply them again.
+ // so strip the animation class first, force a reflow, then apply it again.
  lc.className='ln cur wslot';
- [lp2,lp,ln,ln2].forEach(e=>e.classList.remove('roll'));
  void lc.offsetWidth;
  lc.className='ln cur wslot an-'+a;
- if(a==='wheel')[lp2,lp,lc,ln,ln2].forEach(e=>e.classList.add('roll'));
  [lp,lc,ln].forEach(e=>e.style.opacity='');
 }
-$('lstyle').addEventListener('change',()=>{document.body.dataset.ls=$('lstyle').value==='wheel'?'wheel':'flat';if(L.length&&idx>=0)show(idx)});
+$('lstyle').addEventListener('change',()=>{if(L.length&&idx>=0)show(idx)});
 
 // demo
 const DEMO=`[00:01.00] this is the demo track
